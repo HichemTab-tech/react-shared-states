@@ -8,10 +8,10 @@ import tailwindcss from '@tailwindcss/vite';
 
 
 const bannerContent = `/*!
-* %PACKAGE-NAME% v0.1.0
-* (c) %AUTHOR-NAME%
+* react-shared-states v0.1.0
+* (c) Hichem Taboukouyout
 * Released under the MIT License.
-* Github: github.com/%GITHUB-OWNER-USERNAME%/%REPO-NAME%
+* Github: github.com/HichemTab-tech/react-shared-states
 */
    `;
 

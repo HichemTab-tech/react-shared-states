@@ -1,115 +1,101 @@
-# npm-package-skeleton 🧱
+# React shared states
 
-A simple and powerful skeleton to kickstart your next NPM package.  
-Designed to get out of your way and let you focus on building.  
-
-> 🎯 Comes with built-in setup automation, GitHub workflows, author metadata, and more!
+A brief and clear description of your package. Explain what problem it solves and why users might find it useful.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
-1. **Use the template**  
-   Click the **[Use this template](https://github.com/HichemTab-tech/npm-package-skeleton/generate)** button on the GitHub page
-   to create your own repo from this skeleton.
+Start by installing the package via your preferred package manager:
 
-2. **Clone your new repository**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-   cd YOUR_REPO_NAME
-   ```
+```sh
+npm install react-shared-states
+```
 
-3. **Run the setup script**
-   ```bash
-   npm install
-   npm run setup
-   ```
+or, if using pnpm:
 
-4. **Answer the prompts**, and your package will be tailored to you:
-   - Package name
-   - Author info
-   - GitHub username
-   - Preferred package manager (`npm` or `pnpm`)
-   - etc.
-
-5. **Done!**  
-   Your skeleton is now personalized, cleaned up, initialized with Git, and ready to code 🎸  
-   **You can even publish to npm with a single GitHub release!**
-
-## 📦 Publishing to npm
-
-This skeleton comes with a preconfigured GitHub Action to automatically publish your package to [npmjs.com](https://www.npmjs.com/) whenever you create a GitHub release. 🎉
-
-To enable it:
-
-1. **Create an npm access token**:
-    - Go to your [npm account tokens page](https://www.npmjs.com/settings/tokens).
-    - Click **"Generate New Token"**.
-    - Choose **"Automation"** (or **"Classic" with "Publish" access** if you prefer).
-    - Copy the generated token.
-
-2. **Add the token to your GitHub repo**:
-    - Go to your repository on GitHub.
-    - Navigate to **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
-    - Name it exactly: `NODE_AUTH_TOKEN`
-    - Paste your token as the value.
-
-3. **Publish your package**:
-    - Push your changes to `main` (or your default branch).
-    - Go to the **Releases** tab on GitHub.
-    - Click **"Draft a new release"** and fill in the version/tag.
-    - Once published, the GitHub Action will automatically publish your package to npm. 🚀
-
-✅ That’s it! Now your releases will sync directly to npm with no extra steps.
-
+```sh
+pnpm add react-shared-states
+```
 
 ---
 
-## ✨ What's Included
+## 📖 Usage
 
-- 🔁 Replaces placeholders with your custom info.
-- 🧪 Ready-to-go structure.
-- 🔧 GitHub Workflows:
-    - Auto-assign issues
-    - Dependabot support
-    - ✅ **Publish to npm on GitHub release** (just create a release tag, and it’s live!)
-- 📋 GitHub repo enhancements:
-    - Issue templates for structured bug reports and feature requests.
-    - Pull Request templates to encourage clear and detailed contributions.
-- 🧹 Auto-cleans stub files and setup script after running.
-- 💡 Package manager-based CI workflows (only keeps the one you need!).
+Show a straightforward example of how to quickly use the package:
+
+```javascript
+import { exampleFunction } from 'react-shared-states';
+
+exampleFunction();
+```
 
 ---
 
-## 📦 Why Use This?
+## ⚙️ API Reference
 
-Creating a new NPM package can be a chore:
-- Configure GitHub flows ✅
-- Clean project structure ✅
-- Automate publishing ✅
+### 🚩 **Function `exampleFunction(args)`**
 
-Let this repo do all the boring stuff, so you can jump straight into the code.
+Description of what this function/method does and how to use it.
+
+**Parameters:**
+
+| Parameter   | Type   | Description                        |
+|-------------|--------|------------------------------------|
+| `args`      | any    | Description of the arguments.      |
+
+**Returns:**
+
+- Type: `any`
+Briefly describe the returned value or output.
+
+**Example:**
+
+```javascript
+import { exampleFunction } from 'react-shared-states';
+
+const result = exampleFunction('Hello, world!');
+console.log(result);
+```
 
 ---
 
-## 🤝 Contribute
+## 🤝 Contributions
 
-This is just the beginning.
+Contributions are welcome! Feel free to:
 
-There’s so much room to grow — from better GitHub automations (issue bots, release helpers) to richer setup options.
+1. Fork the repository
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-If you’ve got ideas, open a pull request or start a discussion — **contributions are super welcome!** 🌱
-
----
-
-## 🌟 Support
-
-If this helped you out,
-please consider giving the repo a ⭐️ on [GitHub](https://github.com/HichemTab-tech/npm-package-skeleton) —
-every bit of support means a lot!
+Please follow existing coding styles and clearly state your changes in the pull request.
 
 ---
 
-## License
+## 🐞 Issues
 
-[MIT](./LICENSE)
+If you encounter any issue, please open an issue [here](https://github.com/HichemTab-tech/react-shared-states/issues).
+
+---
+
+## 📄 License
+
+Distributed under the MIT License. See [`LICENSE`](LICENSE) file for more details.
+
+&copy; 2025 [Hichem Taboukouyout](mailto:hichem.taboukouyout@hichemtab-tech.me)
+
+---
+
+## ⭐️ Support
+
+If you found this package helpful, consider leaving a star! ⭐️
+
+---
+
+## 📣 Acknowledgments
+
+Acknowledgments and thanks to:
+
+- Mention any useful inspiration, references, or external resources here if applicable.

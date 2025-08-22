@@ -38,7 +38,7 @@ Please list the changes introduced by this PR. You can format them as bullet poi
 
 ## 📦 Dependency Updates
 
-- [ ] If this PR updates or adds a dependency, I have run `%npm% install` and verified that the project builds and works properly.
+- [ ] If this PR updates or adds a dependency, I have run `pnpm install` and verified that the project builds and works properly.
 - [ ] If applicable, I have updated the `dependabot.yml` schedule for dependency updates.
 
 ---

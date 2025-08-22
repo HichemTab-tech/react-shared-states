@@ -1,85 +1,112 @@
-# Contributing to npm-package-skeleton 🧱
+# 👥 Contributing to React shared states
 
-First off, thanks for taking the time to contribute!  
-This project is still growing, and every bit of help is appreciated — from fixing bugs to improving workflows.
+Thank you for your interest in contributing to this project! Open source contributions help improve projects, introduce new ideas, and build a better community.
 
 ---
 
-## 🛠️ How to Contribute
+## 🚨 Before You Start
 
-### 1. Fork the Repo
+Before contributing, please:
 
-Click the **Fork** button on the top right of the [main repo](https://github.com/HichemTab-tech/npm-package-skeleton) and clone it locally:
+- Browse [existing issues](https://github.com/HichemTab-tech/react-shared-states/issues) to see if your issue or feature idea has already been raised.
+- If your idea or issue hasn't been addressed, feel free to [create a new issue](https://github.com/HichemTab-tech/react-shared-states/issues/new).
 
-```bash
-git clone https://github.com/HichemTab-tech/npm-package-skeleton.git
-cd npm-package-skeleton
-```
+---
 
-### 2. Create a Branch
+## 📄 Code of Conduct
 
-Always work in a branch for your changes:
+Please ensure your contributions follow these general guidelines:
 
-```bash
-git checkout -b feature/your-feature-name
-```
+- Be respectful and professional at all times.
+- Treat everyone in the community with kindness.
+- Discuss constructively and respectfully.
 
-### 3. Make Your Changes
+Any harassment or inappropriate behavior is strictly prohibited.
 
-Feel free to improve anything:
-- 🧱 Template code structure
-- ⚙️ GitHub workflows
-- 📦 Setup logic
-- 📄 Docs and README clarity
-- 🤖 Automation and CI/CD
+---
 
-### 4. Test Your Changes
+## ⚙️ Setting Up Your Environment
 
-Try running the setup script locally to make sure everything works as expected:
+To start contributing to the project, follow these steps:
 
-```bash
+1. Fork this repository on GitHub.
+2. Clone your forked repository:
+
+    ```sh
+    git clone https://github.com/YOUR_GITHUB_USERNAME/react-shared-states
+    cd react-shared-states
+    ```
+
+3. Install dependencies with your preferred package manager:
+
+- npm:
+```sh
 npm install
-npm run setup
 ```
 
-> Tip: Use a temporary test folder or make a backup if needed.
-
-### 5. Commit and Push
-
-Use clear and descriptive commit messages:
-
-```bash
-git add .
-git commit -m "Add support for XYZ"
-git push origin feature/your-feature-name
+- pnpm:
+```sh
+pnpm install
 ```
 
-### 6. Open a Pull Request
+---
 
-Go to your fork on GitHub and click "Compare & pull request".  
-Please include:
-- A brief description of the change
-- Why it's useful or what it fixes
-- Screenshots if relevant
+## 🔨 Making Changes
+
+To submit a feature or bug fix, please:
+
+1. Create a branch from the `main` branch. Name the branch according to your feature or bug fix:
+
+    ```sh
+    git checkout -b feature/CoolNewFeature
+    ```
+
+    or for bug fixes:
+
+    ```sh
+    git checkout -b fix/bug-description
+    ```
+
+2. After making your necessary changes, run relevant checks and tests to ensure everything works correctly:
+
+    ```sh
+    npm test
+    ```
+
+    or with pnpm:
+
+    ```sh
+    pnpm test
+    ```
+
+3. Stage and commit your changes clearly describing what has been changed:
+
+    ```sh
+    git add .
+    git commit -m 'feat: Add CoolNewFeature to improve performance'
+    ```
+
+4. Push your branch to your forked repo:
+
+    ```sh
+    git push origin feature/CoolNewFeature
+    ```
 
 ---
 
-## 💡 Contribution Ideas
+## 📝 Submitting a Pull Request
 
-- Add more GitHub workflow examples (PR bots, issue responders)
-- Improve setup prompts or add more customization options
-- Add test coverage or linting suggestions
-- Support for more package managers or monorepo setups
-- Add license picker or release versioning helpers
+When your changes are ready:
 
----
-
-## 🙏 Thank You
-
-Whether you're fixing a typo or adding a major feature, thank you!  
-Every contribution helps make this a better tool for the community.  
-And if you liked it, don’t forget to ⭐ the repo!
+1. Open GitHub and navigate to your forked repository.
+2. Click `Compare & pull request`.
+3. Clearly explain the following in your pull request description:
+   - **What changes you made and why they are needed.**
+   - **Any linked relevant issues (e.g., "**Closes #number**").**
+4. Wait for project maintainers review to suggest changes or to merge your PR.
 
 ---
 
-> Maintained by [@HichemTab-tech](https://github.com/HichemTab-tech)
+## 📌 Commit Message Guidelines
+
+Write clear commit messages, formatted this way:

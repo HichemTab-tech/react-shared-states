@@ -1,6 +1,6 @@
 import * as React from 'react';
 //import {GiveHichemTabTechCredit, MyComponent} from '../dist/main.js'; // Import your built library
-import {GiveHichemTabTechCredit, MyComponent} from '%PACKAGE-NAME%'; // Import your dev library
+import {GiveHichemTabTechCredit, MyComponent} from 'react-shared-states'; // Import your dev library
 
 const App = () => {
 
@@ -8,7 +8,7 @@ const App = () => {
 
     return (
         <div>
-            <h1 className="text-red-600">%DISPLAY-NAME% Demo</h1>
+            <h1 className="text-red-600">React shared states Demo</h1>
             <MyComponent/>
         </div>
     );
