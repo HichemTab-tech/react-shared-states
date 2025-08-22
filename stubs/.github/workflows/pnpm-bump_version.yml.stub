@@ -1,0 +1,91 @@
+name: Version Bump and PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_increment:
+        description: "Version increment type (patch, minor, major, or custom)"
+        required: true
+        default: "patch"
+      custom_version:
+        description: "Custom version (only if version_increment is custom)"
+        required: false
+
+jobs:
+  version-bump:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js and pnpm
+        uses: actions/setup-node@v3
+        with:
+          node-version: '23.x'  # Ensure you're using Node.js 22.x
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Initialize git and checkout
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Increment or set version
+        id: bump-version
+        run: |
+          # Read the current version from package.json
+          CURRENT_VERSION=$(jq -r '.version' package.json)
+
+          # Determine the new version
+          if [[ "${{ github.event.inputs.version_increment }}" == "custom" && -n "${{ github.event.inputs.custom_version }}" ]]; then
+            NEW_VERSION="${{ github.event.inputs.custom_version }}"
+          else
+            NEW_VERSION=$(pnpm exec semver $CURRENT_VERSION -i ${{ github.event.inputs.version_increment }})
+          fi
+
+          # Output the new version
+          echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
+
+          # Create/checkout the branch
+          git checkout -b version-bump-$NEW_VERSION
+
+          # Update package.json with the new version
+          jq ".version=\"$NEW_VERSION\"" package.json > temp.json && mv temp.json package.json
+
+          # Regenerate pnpm-lock.yaml
+          pnpm install
+
+      - name: Commit changes
+        run: |
+          git add package.json pnpm-lock.yaml
+          git commit -m "Bump version to ${{ env.new_version }}"
+
+      - name: Push changes
+        run: |
+          git push -u origin version-bump-${{ env.new_version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request
+        run: |
+          echo "Creating a Pull Request for branch: version-bump-${{ env.new_version }}"
+          PR_RESPONSE=$(curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/pulls \
+            -d @- <<EOF
+          {
+            "title": "Bump version to ${{ env.new_version }}",
+            "body": "This PR updates the version to ${{ env.new_version }} in \`package.json\` and \`pnpm-lock.yaml\`.",
+            "head": "version-bump-${{ env.new_version }}",
+            "base": "master"
+          }
+          EOF
+          )
+          echo "Pull Request Response: $PR_RESPONSE"

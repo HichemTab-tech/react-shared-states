@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@import "tailwindcss/preflight";
+@tailwind utilities; /* Tailwind utility classes */
+
+.myClass{
+    background: red;
+}

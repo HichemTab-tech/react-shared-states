@@ -1,0 +1,34 @@
+{
+  "name": "npm-package-skeleton",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "",
+  "keywords": [
+    "package-skeleton",
+    "npm-package-skeleton",
+    "npm-package",
+    "skeleton",
+    "npm",
+    "package"
+  ],
+  "scripts": {
+    "setup": "npm install && node scripts/setup.mjs"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "author": "Hichem Taboukouyout <hichem.tab2002@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HichemTab-tech/npm-package-skeleton.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/HichemTab-tech/npm-package-skeleton/issues"
+  },
+  "homepage": "https://github.com/HichemTab-tech/npm-package-skeleton#readme",
+  "dependencies": {
+    "prompts": "^2.4.2"
+  }
+}
