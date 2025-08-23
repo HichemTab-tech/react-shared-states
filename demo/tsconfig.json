@@ -3,7 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "surveyjs-builder": ["../src"]
+      "react-shared-states": ["../src"]
     }
   },
   "include": [

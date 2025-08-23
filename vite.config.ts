@@ -2,24 +2,22 @@ import { defineConfig } from 'vite';
 import banner from 'vite-plugin-banner';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
-import dts from 'vite-plugin-dts'; // Import the dts plugin
-import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js';
-import tailwindcss from '@tailwindcss/vite';
+import dts from 'vite-plugin-dts';
 
-
+const version = require('./package.json').version;
 const bannerContent = `/*!
-* react-shared-states v0.1.0
+* react-shared-states v${version}
 * (c) Hichem Taboukouyout
 * Released under the MIT License.
 * Github: github.com/HichemTab-tech/react-shared-states
 */
-   `;
+`;
 
 export default defineConfig({
     build: {
         lib: {
             entry: resolve(__dirname, 'src/index.ts'), // Library entry point
-            name: 'ReactSurveyCreator',
+            name: 'ReactSharedStates',
             fileName: (format: string) => `main${format === 'es' ? '' : '.min'}.js`,
             formats: ['es', 'umd']
         },
@@ -39,10 +37,8 @@ export default defineConfig({
         }
     },
     plugins: [
-        tailwindcss(),
         react(),
-        banner(bannerContent),
-        cssInjectedByJsPlugin(),
+        banner(bannerContent.replace("{{VERSION}}", "")),
         dts({
             entryRoot: 'src', // Base folder for type generation
             outDir: 'dist', // Ensures types go into `dist/`
