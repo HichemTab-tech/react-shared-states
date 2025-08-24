@@ -1,14 +1,14 @@
 
 # React Shared States
 
+> Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping.
+
 [![npm version](https://img.shields.io/npm/v/react-shared-states)](https://www.npmjs.com/package/react-shared-states)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/react-shared-states)](https://bundlephobia.com/package/react-shared-states)
 [![license](https://img.shields.io/github/license/HichemTab-tech/react-shared-states)](LICENSE)
 
 
 Tiny, ergonomic, convention‑over‑configuration state & async function sharing for React. Global by default, trivially scoped when you need isolation, and opt‑in static APIs when you must touch state outside components. As simple as `useState`, as flexible as Zustand, without boilerplate like Redux.
-
----
 
 ## 🔥 Why this instead of Redux / Zustand / Context soup?
 * 0 config. Just pick a key: `useSharedState('cart', [])`.
@@ -19,7 +19,6 @@ Tiny, ergonomic, convention‑over‑configuration state & async function sharin
 * No custom store objects, reducers, actions, selectors, immer, proxies, or serialization hoops.
 * Predictable: key + scope ⇒ value. That’s it.
 
----
 
 ## 🚀 Install
 
@@ -30,8 +29,6 @@ or
 ```sh
 pnpm add react-shared-states
 ```
-
----
 
 ## ☕ 60‑Second TL;DR
 ```tsx
@@ -170,7 +167,6 @@ export default function App(){
 // forceTrigger(); // bypass cache & re-run
 ```
 
----
 
 ## 🧠 Core Concepts
 | Concept           | Summary                                                                                                                         |
@@ -182,7 +178,6 @@ export default function App(){
 | Shared functions  | Encapsulate async logic: single flight + cached result + `error` + `isLoading` + opt‑in refresh.                                |
 | Static APIs       | Access state/functions outside components (`sharedStatesApi`, `sharedFunctionsApi`).                                            |
 
----
 
 ## 🏗️ Sharing State (`useSharedState`)
 Signature: `const [value, setValue] = useSharedState(key, initialValue, scopeName?);`
@@ -217,7 +212,6 @@ Behavior:
     const [flag, setFlag] = useSharedState('feature-x-enabled', false, '_global');
     ```
 
----
 
 ## ⚡ Shared Async Functions (`useSharedFunction`)
 Signature:
@@ -249,7 +243,6 @@ const { state, forceTrigger } = useSharedFunction('server-time', () => fetch('/t
 const refresh = () => forceTrigger();
 ```
 
----
 
 ## 🛰️ Static APIs (outside React)
 Useful for SSR hydration, event listeners, debugging, imperative workflows.
@@ -279,7 +272,6 @@ const fnState = sharedFunctionsApi.get('profile-123');
 
 `scope` defaults to `"_global"`. Internally keys are stored as `${scope}_${key}`.
 
----
 
 ## 🧩 Scoping Rules Deep Dive
 Resolution order used inside hooks:
@@ -291,7 +283,6 @@ Unnamed providers auto‑generate a random scope name: each mount = isolated isl
 
 Two providers sharing the same `scopeName` act as a single logical scope even if they are disjoint in the tree (great for portals / microfrontends).
 
----
 
 ## 🆚 Comparison Snapshot
 | Criterion      | react-shared-states                      | Redux Toolkit        | Zustand                          |
@@ -304,14 +295,12 @@ Two providers sharing the same `scopeName` act as a single logical scope even if
 | Static access  | Yes (APIs)                               | Yes (store)          | Yes (store)                      |
 | Learning curve | Minutes                                  | Higher               | Low                              |
 
----
 
 ## 🧪 Testing Tips
 * Use static APIs to assert state after component interactions.
 * `sharedStatesApi.clearAll()` in `afterEach` to isolate tests.
 * For async functions: trigger once, await UI stabilization, assert `results` present.
 
----
 
 ## ❓ FAQ
 **Q: How do I reset a single shared state?**  
@@ -329,7 +318,6 @@ It's cached. Use `forceTrigger()` or `clear()`.
 **Q: Can I use it with Suspense?**  
 Currently no built-in Suspense wrappers; wrap `useSharedFunction` yourself if desired.
 
----
 
 ## 📚 Full API Reference
 ### `useSharedState(key, initialValue, scopeName?)`
@@ -344,7 +332,6 @@ Wrap children; optional `scopeName` (string). If omitted a random unique one is 
 ### Static
 `sharedStatesApi`, `sharedFunctionsApi` (see earlier table).
 
----
 
 
 ## 🤝 Contributions
@@ -353,7 +340,6 @@ We welcome contributions!
 If you'd like to improve `react-shared-states`,
 feel free to [open an issue](https://github.com/HichemTab-tech/react-shared-states/issues) or [submit a pull request](https://github.com/HichemTab-tech/react-shared-states/pulls).
 
----
 
 ## Author
 
