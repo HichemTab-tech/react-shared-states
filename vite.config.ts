@@ -29,11 +29,6 @@ export default defineConfig({
                     'react-dom': 'ReactDOM'
                 }
             }
-        },
-        terserOptions: {
-            format: {
-                comments: false
-            }
         }
     },
     plugins: [
