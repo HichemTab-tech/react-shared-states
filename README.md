@@ -12,7 +12,7 @@ Tiny, ergonomic, convention‑over‑configuration state & async function sharin
 * Async functions become cached shared resources via `useSharedFunction` (built‑in loading, error, results, reentrancy guard, manual or forced refresh).
 * Static APIs (`sharedStatesApi`, `sharedFunctionsApi`) let you prime / read / mutate outside React (SSR, event buses, dev tools, tests).
 * No custom store objects, reducers, actions, selectors, immer, proxies, or serialization hoops.
-* Predictable: key + scope => value. That’s it.
+* Predictable: key + scope ⇒ value. That’s it.
 
 ---
 
@@ -40,8 +40,18 @@ function B(){
   const [count] = useSharedState('counter', 0);
   return <span>B sees {count}</span>;
 }
+
+function App() {
+  
+  return (
+    <>
+      <A/>
+      <B/>
+    </>
+  )
+}
 ```
-Same key => same state (global scope by default).
+Same key ⇒ same state (global scope by default).
 
 Add a scope:
 ```tsx
@@ -52,10 +62,18 @@ function Scoped(){
   return <button onClick={()=>set(c=>c+1)}>Scoped {count}</button>;
 }
 
-<A/><B/>
-<SharedStatesProvider>
-  <Scoped/>
-</SharedStatesProvider>
+function App() {
+
+  return (
+    <>
+      <A/>
+      <B/>
+      <SharedStatesProvider>
+        <Scoped/>
+      </SharedStatesProvider>
+    </>
+  )
+}
 ```
 
 Override / jump to a named scope explicitly:
@@ -73,6 +91,21 @@ Two separate trees with the same `SharedStatesProvider scopeName` share their da
     <FloatingToolbar/>
   </SharedStatesProvider>
 </Portal>
+function App() {
+
+  return (
+    <>
+      <SharedStatesProvider scopeName="modal">
+        <ModalContent/>
+      </SharedStatesProvider>
+      <Portal target={...}>
+        <SharedStatesProvider scopeName="modal">
+          <FloatingToolbar/>
+        </SharedStatesProvider>
+      </Portal>
+    </>
+  )
+}
 ```
 
 Async shared function:
