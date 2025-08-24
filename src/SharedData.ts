@@ -1,4 +1,4 @@
-import type {AFunction, DataMapValue, Prefix} from "./types";
+import type {AFunction, DataMapValue, NonEmptyString, Prefix} from "./types";
 
 
 type SharedDataType<T> = DataMapValue & T;
@@ -41,8 +41,20 @@ export abstract class SharedData<T> {
         }
     }
 
-    clear() {
+    clearAll(withoutListeners = false) {
+        if (!withoutListeners) {
+            this.data.forEach((value) => {
+                value.listeners.forEach((listener) => listener());
+            });
+        }
         this.data.clear();
+    }
+
+    clear(key: string, prefix: Prefix, withoutListeners = false) {
+        if (!withoutListeners) {
+            this.callListeners(key, prefix);
+        }
+        this.data.delete(SharedData.prefix(key, prefix));
     }
 
     get(key: string, prefix: Prefix) {
@@ -67,4 +79,13 @@ export abstract class SharedData<T> {
     static prefix(key: string, prefix: Prefix) {
         return `${prefix}_${key}`;
     }
+}
+
+export interface SharedApi<T> {
+    get: <S extends string = string>(key: NonEmptyString<S>, scopeName: Prefix) => T;
+    set: <S extends string = string>(key: NonEmptyString<S>, value: T, scopeName: Prefix) => void;
+    clearAll: () => void;
+    clear: (key: string, scopeName: Prefix) => void;
+    has: (key: string, scopeName: Prefix) => boolean;
+    getAll: () => Map<string, DataMapValue>;
 }

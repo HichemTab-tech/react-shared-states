@@ -1,12 +1,12 @@
 import {useSyncExternalStore} from "react";
-import {useSharedStatesContext} from "../context/SharedStatesContext";
-import type {Prefix} from "../types";
-import {SharedData} from "../SharedData";
+import type {NonEmptyString, Prefix} from "../types";
+import {type SharedApi, SharedData} from "../SharedData";
+import useShared from "./use-shared";
 
 class SharedStatesData extends SharedData<{
     value: unknown
 }> {
-    defaultValue(): { value: unknown } {
+    defaultValue() {
         return {value: undefined};
     }
 
@@ -19,12 +19,40 @@ class SharedStatesData extends SharedData<{
     }
 }
 
+class SharedStatesApi implements SharedApi<{
+    value: unknown
+}>{
+    get<T, S extends string = string>(key: NonEmptyString<S>, scopeName: Prefix = "_global") {
+        const prefix: Prefix = scopeName || "_global";
+        return sharedStatesData.get(key, prefix)?.value as T;
+    }
+    set<T, S extends string = string>(key: NonEmptyString<S>, value: T, scopeName: Prefix = "_global") {
+        const prefix: Prefix = scopeName || "_global";
+        sharedStatesData.setValue(key, prefix, {value});
+    }
+    clearAll() {
+        sharedStatesData.clearAll();
+    }
+    clear(key: string, scopeName: Prefix = "_global") {
+        const prefix: Prefix = scopeName || "_global";
+        sharedStatesData.clear(key, prefix);
+    }
+    has(key: string, scopeName: Prefix = "_global") {
+        const prefix: Prefix = scopeName || "_global";
+        return Boolean(sharedStatesData.has(key, prefix));
+    }
+    getAll() {
+        return sharedStatesData.data;
+    }
+}
+
+export const sharedStatesApi = new SharedStatesApi();
+
 const sharedStatesData = new SharedStatesData();
 
-export const useSharedState = <T>(key: string, value: T, scopeName?: Prefix) => {
+export const useSharedState = <T, S extends string = string>(key: NonEmptyString<S>, value: T, scopeName?: Prefix) => {
 
-    const sharedStatesContext = useSharedStatesContext();
-    const prefix: Prefix = scopeName ?? sharedStatesContext?.scopeName ?? "_global";
+    const {prefix} = useShared(scopeName);
 
     sharedStatesData.init(key, prefix, value);
 

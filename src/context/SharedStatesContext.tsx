@@ -1,4 +1,5 @@
 import {createContext, type PropsWithChildren, useContext, useMemo} from 'react';
+import type {NonEmptyString} from "../types";
 
 export interface SharedStatesType {
     scopeName: string
@@ -6,13 +7,13 @@ export interface SharedStatesType {
 
 const SharedStatesContext = createContext<SharedStatesType | undefined>(undefined);
 
-interface SharedStatesProviderProps extends PropsWithChildren {
-    scopeName?: string
+interface SharedStatesProviderProps<T extends string = string> extends PropsWithChildren {
+    scopeName?: '__global' extends NonEmptyString<T> ? never : NonEmptyString<T>;
 }
 
-export const SharedStatesProvider = ({ children, scopeName }: SharedStatesProviderProps) => {
+export const SharedStatesProvider = <T extends string = string>({ children, scopeName }: SharedStatesProviderProps<T>) => {
 
-    if (!scopeName) scopeName = useMemo(() => Math.random().toString(36).substring(2, 15), []);
+    if (!scopeName) scopeName = useMemo(() => Math.random().toString(36).substring(2, 15) as NonNullable<SharedStatesProviderProps<T>['scopeName']>, []);
 
     return (
         <SharedStatesContext.Provider value={{scopeName}}>

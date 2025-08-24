@@ -5,3 +5,5 @@ export type Prefix = "_global" | ({} & string);
 export interface DataMapValue {
     listeners: AFunction[]
 }
+
+export type NonEmptyString<T extends string> = '' extends T ? never : T;
