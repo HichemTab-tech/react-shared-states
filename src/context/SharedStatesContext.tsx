@@ -1,19 +1,21 @@
 import {createContext, type PropsWithChildren, useContext, useMemo} from 'react';
 
 export interface SharedStatesType {
-    uniqueName: string
+    scopeName: string
 }
 
 const SharedStatesContext = createContext<SharedStatesType | undefined>(undefined);
 
-interface SharedStatesProviderProps extends PropsWithChildren {}
+interface SharedStatesProviderProps extends PropsWithChildren {
+    scopeName?: string
+}
 
-export const SharedStatesProvider = ({ children }: SharedStatesProviderProps) => {
+export const SharedStatesProvider = ({ children, scopeName }: SharedStatesProviderProps) => {
 
-    const uniqueName = useMemo(() => Math.random().toString(36).substring(2, 15), []);
+    if (!scopeName) scopeName = useMemo(() => Math.random().toString(36).substring(2, 15), []);
 
     return (
-        <SharedStatesContext.Provider value={{uniqueName}}>
+        <SharedStatesContext.Provider value={{scopeName}}>
             {children}
         </SharedStatesContext.Provider>
     );
