@@ -2,7 +2,7 @@
   "name": "react-shared-states",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
+  "description": "Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping.",
   "keywords": [
     "react",
     "shared-states",
@@ -16,7 +16,6 @@
   "module": "dist/main.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "dev": "vite",
     "build": "vite build",
     "test": "vitest",
     "preview": "vite preview",
