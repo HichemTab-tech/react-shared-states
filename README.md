@@ -3,6 +3,8 @@
 
 **_Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping._**
 
+![react-shared-states banner](assets/banner.png)
+
 ---
 
 [![npm version](https://img.shields.io/npm/v/react-shared-states)](https://www.npmjs.com/package/react-shared-states)
