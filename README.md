@@ -1,6 +1,11 @@
 
 # React Shared States
 
+[![npm version](https://img.shields.io/npm/v/react-shared-states)](https://www.npmjs.com/package/react-shared-states)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/react-shared-states)](https://bundlephobia.com/package/react-shared-states)
+[![license](https://img.shields.io/github/license/HichemTab-tech/react-shared-states)](LICENSE)
+
+
 Tiny, ergonomic, convention‑over‑configuration state & async function sharing for React. Global by default, trivially scoped when you need isolation, and opt‑in static APIs when you must touch state outside components. As simple as `useState`, as flexible as Zustand, without boilerplate like Redux.
 
 ---
