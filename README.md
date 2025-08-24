@@ -360,4 +360,5 @@ feel free to [open an issue](https://github.com/HichemTab-tech/react-shared-stat
 
 ## 🌟 Acknowledgements
 
-Special thanks to the open-source community and early adopters of `react-shared-states` for their feedback, which helped expand support to Webpack alongside Vite.
+Inspired by React's built-in primitives and the ergonomics of modern lightweight state libraries.
+Thanks to early adopters for feedback.
