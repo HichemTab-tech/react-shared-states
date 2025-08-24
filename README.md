@@ -34,23 +34,23 @@ By default, shared states are global. Any component using the same key will shar
 import { useSharedState } from 'react-shared-states';
 
 function CounterA() {
-	const [count, setCount] = useSharedState('counter', 0);
-	return <button onClick={() => setCount(c => c + 1)}>A: {count}</button>;
+  const [count, setCount] = useSharedState('counter', 0);
+  return <button onClick={() => setCount(c => c + 1)}>A: {count}</button>;
 }
 
 function CounterB() {
-	const [count, setCount] = useSharedState('counter', 0);
-	return <button onClick={() => setCount(c => c + 1)}>B: {count}</button>;
+  const [count, setCount] = useSharedState('counter', 0);
+  return <button onClick={() => setCount(c => c + 1)}>B: {count}</button>;
 }
 
 function App() {
-	return (
-		<div>
-			{/* Both components share the same state! */}
-			<CounterA />
-			<CounterB />
-		</div>
-	);
+  return (
+    <div>
+      {/* Both components share the same state! */}
+      <CounterA />
+      <CounterB />
+    </div>
+  );
 }
 ```
 
@@ -62,36 +62,36 @@ function App() {
 Wrap part of your app with `SharedStatesProvider` to scope shared states. States inside the provider are isolated from global/shared states outside. The nearest provider above a component determines its scope.
 
 ```tsx
-import { SharedStatesProvider, useSharedState } from 'react-shared-states';
+import {SharedStatesProvider, useSharedState} from 'react-shared-states';
 
 function CounterA() {
-	const [count, setCount] = useSharedState('counter', 0);
-	return <button onClick={() => setCount(c => c + 1)}>A: {count}</button>;
+  const [count, setCount] = useSharedState('counter', 0);
+  return <button onClick={() => setCount(c => c + 1)}>A: {count}</button>;
 }
 
 function CounterB() {
-	const [count, setCount] = useSharedState('counter', 0);
-	return <button onClick={() => setCount(c => c + 1)}>B: {count}</button>;
+  const [count, setCount] = useSharedState('counter', 0);
+  return <button onClick={() => setCount(c => c + 1)}>B: {count}</button>;
 }
 
 function ScopedCounter() {
-	const [count, setCount] = useSharedState('counter', 0);
-	return <button onClick={() => setCount(c => c + 1)}>Scoped: {count}</button>;
+  const [count, setCount] = useSharedState('counter', 0);
+  return <button onClick={() => setCount(c => c + 1)}>Scoped: {count}</button>;
 }
 
 function App() {
-	return (
-		<div>
-			{/* These two share the global state */}
-			<CounterA />
-			<CounterB />
+  return (
+    <div>
+      {/* These two share the global state */}
+      <CounterA/>
+      <CounterB/>
 
-			{/* This one is scoped and isolated from the above */}
-			<SharedStatesProvider>
-				<ScopedCounter />
-			</SharedStatesProvider>
-		</div>
-	);
+      {/* This one is scoped and isolated from the above */}
+      <SharedStatesProvider>
+        <ScopedCounter/>
+      </SharedStatesProvider>
+    </div>
+  );
 }
 ```
 
@@ -134,7 +134,7 @@ Scopes shared states to its children. States inside are isolated from global sta
 
 ```tsx
 <SharedStatesProvider>
-	<YourComponent />
+  <YourComponent />
 </SharedStatesProvider>
 ```
 
@@ -143,42 +143,20 @@ Scopes shared states to its children. States inside are isolated from global sta
 
 ## 🤝 Contributions
 
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a pull request
-
-Follow coding styles and clearly state your changes in the PR.
+We welcome contributions!
+If you'd like to improve `react-shared-states`,
+feel free to [open an issue](https://github.com/HichemTab-tech/react-shared-states/issues) or [submit a pull request](https://github.com/HichemTab-tech/react-shared-states/pulls).
 
 ---
 
+## Author
 
-## 🐞 Issues
+- [@HichemTab-tech](https://www.github.com/HichemTab-tech)
 
-If you encounter any issue, open an issue [here](https://github.com/HichemTab-tech/react-shared-states/issues).
+## License
 
----
+[MIT](https://github.com/HichemTab-tech/react-shared-states/blob/master/LICENSE)
 
+## 🌟 Acknowledgements
 
-## 📄 License
-
-Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
-
-&copy; 2025 [Hichem Taboukouyout](mailto:hichem.taboukouyout@hichemtab-tech.me)
-
----
-
-
-## ⭐️ Support
-
-If you found this package helpful, please leave a star! ⭐️
-
----
-
-
-## 📣 Acknowledgments
-
-Thanks to all contributors and inspiration from React's context and state management community.
+Special thanks to the open-source community and early adopters of `react-shared-states` for their feedback, which helped expand support to Webpack alongside Vite.

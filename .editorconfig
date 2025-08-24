@@ -1,0 +1,9 @@
+# EditorConfig is awesome: https://editorconfig.org
+
+root = true
+
+[*]
+indent_size = 4
+
+[*.md]
+indent_size = 2
