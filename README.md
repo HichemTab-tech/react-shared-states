@@ -1,7 +1,9 @@
 
 # React Shared States
 
-> Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping.
+**_Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping._**
+
+---
 
 [![npm version](https://img.shields.io/npm/v/react-shared-states)](https://www.npmjs.com/package/react-shared-states)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/react-shared-states)](https://bundlephobia.com/package/react-shared-states)
