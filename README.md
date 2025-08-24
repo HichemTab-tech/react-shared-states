@@ -1,162 +1,292 @@
 
 # React Shared States
 
-Easily share and synchronize state across React components, with support for both global and scoped states using context providers. This package helps avoid prop drilling and simplifies state management for medium to large React apps.
+Tiny, ergonomic, convention‑over‑configuration state & async function sharing for React. Global by default, trivially scoped when you need isolation, and opt‑in static APIs when you must touch state outside components. As simple as `useState`, as flexible as Zustand, without boilerplate like Redux.
 
 ---
 
+## 🔥 Why this instead of Redux / Zustand / Context soup?
+* 0 config. Just pick a key: `useSharedState('cart', [])`.
+* Automatic scoping: nearest `SharedStatesProvider` wins; omit it for global.
+* Cross‑tree sharing via named scopes (two providers with same `scopeName` share data) – powerful for portals/modals/micro‑frontends.
+* Async functions become cached shared resources via `useSharedFunction` (built‑in loading, error, results, reentrancy guard, manual or forced refresh).
+* Static APIs (`sharedStatesApi`, `sharedFunctionsApi`) let you prime / read / mutate outside React (SSR, event buses, dev tools, tests).
+* No custom store objects, reducers, actions, selectors, immer, proxies, or serialization hoops.
+* Predictable: key + scope => value. That’s it.
 
-## 🚀 Getting Started
+---
 
-Install via your preferred package manager:
+## 🚀 Install
 
 ```sh
 npm install react-shared-states
 ```
-
-or, if using pnpm:
-
+or
 ```sh
 pnpm add react-shared-states
 ```
 
 ---
 
-
-## 📖 Usage
-
-
-### Global Shared State
-
-By default, shared states are global. Any component using the same key will share the same state ("tied" together).
-
+## ☕ 60‑Second TL;DR
 ```tsx
 import { useSharedState } from 'react-shared-states';
 
-function CounterA() {
+function A(){
   const [count, setCount] = useSharedState('counter', 0);
-  return <button onClick={() => setCount(c => c + 1)}>A: {count}</button>;
+  return <button onClick={()=>setCount(c=>c+1)}>A {count}</button>;
 }
-
-function CounterB() {
-  const [count, setCount] = useSharedState('counter', 0);
-  return <button onClick={() => setCount(c => c + 1)}>B: {count}</button>;
-}
-
-function App() {
-  return (
-    <div>
-      {/* Both components share the same state! */}
-      <CounterA />
-      <CounterB />
-    </div>
-  );
+function B(){
+  const [count] = useSharedState('counter', 0);
+  return <span>B sees {count}</span>;
 }
 ```
+Same key => same state (global scope by default).
 
-> **Note:** Both `CounterA` and `CounterB` use the same key (`'counter'`), so their state is always synchronized. Updating one updates the other instantly.
-
-
-### Scoped Shared State (using Provider)
-
-Wrap part of your app with `SharedStatesProvider` to scope shared states. States inside the provider are isolated from global/shared states outside. The nearest provider above a component determines its scope.
-
+Add a scope:
 ```tsx
-import {SharedStatesProvider, useSharedState} from 'react-shared-states';
+import { SharedStatesProvider, useSharedState } from 'react-shared-states';
 
-function CounterA() {
-  const [count, setCount] = useSharedState('counter', 0);
-  return <button onClick={() => setCount(c => c + 1)}>A: {count}</button>;
+function Scoped(){
+  const [count, set] = useSharedState('counter', 0); // isolated inside provider
+  return <button onClick={()=>set(c=>c+1)}>Scoped {count}</button>;
 }
 
-function CounterB() {
-  const [count, setCount] = useSharedState('counter', 0);
-  return <button onClick={() => setCount(c => c + 1)}>B: {count}</button>;
-}
-
-function ScopedCounter() {
-  const [count, setCount] = useSharedState('counter', 0);
-  return <button onClick={() => setCount(c => c + 1)}>Scoped: {count}</button>;
-}
-
-function App() {
-  return (
-    <div>
-      {/* These two share the global state */}
-      <CounterA/>
-      <CounterB/>
-
-      {/* This one is scoped and isolated from the above */}
-      <SharedStatesProvider>
-        <ScopedCounter/>
-      </SharedStatesProvider>
-    </div>
-  );
-}
-```
-
-> **Note:**
-> - `CounterA` and `CounterB` share the same state (global).
-> - `ScopedCounter` inside `SharedStatesProvider` has its own isolated state, independent from the global one.
-> - If you nest multiple providers, each component uses the state from the nearest provider above it in the tree.
-
----
-
-
-## ⚙️ API Reference
-
-### `useSharedState(key, initialValue)`
-
-Creates a shared state by key. Returns `[value, setValue]` tuple. States are global unless used inside a `SharedStatesProvider`, which scopes them locally.
-
-**Parameters:**
-
-| Parameter      | Type   | Description                     |
-|----------------|--------|---------------------------------|
-| `key`          | string | Unique key for the shared state |
-| `initialValue` | any    | Initial value for the state     |
-
-**Returns:**
-
-- `[value, setValue]`: Current value and setter function
-
-**Example:**
-
-```tsx
-const [theme, setTheme] = useSharedState('theme', 'light');
-```
-
-### `SharedStatesProvider`
-
-Scopes shared states to its children. States inside are isolated from global states.
-
-**Example:**
-
-```tsx
+<A/><B/>
 <SharedStatesProvider>
-  <YourComponent />
+  <Scoped/>
 </SharedStatesProvider>
 ```
 
+Override / jump to a named scope explicitly:
+```tsx
+useSharedState('counter', 0, 'modal'); // 3rd arg is scopeName override
+```
+
+Two separate trees with the same `SharedStatesProvider scopeName` share their data:
+```tsx
+<SharedStatesProvider scopeName="modal">
+  <ModalContent/>
+</SharedStatesProvider>
+<Portal target={...}>
+  <SharedStatesProvider scopeName="modal">
+    <FloatingToolbar/>
+  </SharedStatesProvider>
+</Portal>
+```
+
+Async shared function:
+```tsx
+import { useSharedFunction } from 'react-shared-states';
+
+const fetchUser = (id: string) => fetch(`/api/users/${id}`).then(r=>r.json());
+
+function UserPane({id}:{id:string}){
+  const { state: { results: user, isLoading, error }, trigger, forceTrigger, clear } =
+    useSharedFunction(`user-${id}`, () => fetchUser(id));
+
+  if(!user && !isLoading) trigger(); // lazy load once
+  if(isLoading) return <p>Loading...</p>;
+  if(error) return <p style={{color:'red'}}>Error</p>;
+  return <div>{user.name} <button onClick={()=>forceTrigger()}>Refresh</button> <button onClick={clear}>Clear</button></div>;
+}
+```
+
 ---
 
-
-## 🤝 Contributions
-
-We welcome contributions!
-If you'd like to improve `react-shared-states`,
-feel free to [open an issue](https://github.com/HichemTab-tech/react-shared-states/issues) or [submit a pull request](https://github.com/HichemTab-tech/react-shared-states/pulls).
+## 🧠 Core Concepts
+| Concept           | Summary                                                                                                                         |
+|-------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| Global by default | No provider necessary. Same key => shared state.                                                                                |
+| Scoping           | Wrap with `SharedStatesProvider` to isolate. Nearest provider wins.                                                             |
+| Named scopes      | `scopeName` prop lets distant providers sync (same name ⇒ same bucket). Unnamed providers auto‑generate a random isolated name. |
+| Manual override   | Third param in `useSharedState` / `useSharedFunction` enforces a specific scope ignoring tree search.                           |
+| Shared functions  | Encapsulate async logic: single flight + cached result + `error` + `isLoading` + opt‑in refresh.                                |
+| Static APIs       | Access state/functions outside components (`sharedStatesApi`, `sharedFunctionsApi`).                                            |
 
 ---
 
-## Author
+## 🏗️ Sharing State (`useSharedState`)
+Signature: `const [value, setValue] = useSharedState(key, initialValue, scopeName?);`
 
-- [@HichemTab-tech](https://www.github.com/HichemTab-tech)
+Behavior:
+* First hook call (per key + scope) seeds with `initialValue`.
+* Subsequent mounts with same key+scope ignore their `initialValue` (consistent source of truth).
+* Setter accepts either value or updater `(prev)=>next`.
+* React batching + equality check: listeners fire only when the value reference actually changes.
 
-## License
+### Examples
+1. Global theme
+```tsx
+const [theme, setTheme] = useSharedState('theme', 'light');
+```
+2. Isolated wizard progress
+```tsx
+<SharedStatesProvider>
+  <Wizard/>
+</SharedStatesProvider>
+```
+3. Forcing cross‑portal sync
+```tsx
+<SharedStatesProvider scopeName="nav" children={<PrimaryNav/>} />
+<Portal>
+  <SharedStatesProvider scopeName="nav" children={<MobileNav/>} />
+</Portal>
+```
+4. Overriding nearest provider
+```tsx
+// Even if inside a provider, this explicitly binds to global
+const [flag, setFlag] = useSharedState('feature-x-enabled', false, '_global');
+```
 
-[MIT](https://github.com/HichemTab-tech/react-shared-states/blob/master/LICENSE)
+---
+
+## ⚡ Shared Async Functions (`useSharedFunction`)
+Signature:
+```ts
+const { state, trigger, forceTrigger, clear } = useSharedFunction(key, asyncFn, scopeName?);
+```
+`state` shape: `{ results?: T; isLoading: boolean; error?: unknown }`
+
+Semantics:
+* First `trigger()` (implicit or manual) runs the function; subsequent calls do nothing while loading or after success (cached) unless you `forceTrigger()`.
+* Multiple components with same key+scope share one execution + result.
+* `clear()` deletes the cache (next trigger re-runs).
+* You decide when to invoke `trigger` (e.g. on mount, on button click, when dependencies change, etc.).
+
+### Pattern: lazy load on first render
+```tsx
+function Profile({id}:{id:string}){
+  const { state, trigger } = useSharedFunction(`profile-${id}`, () => fetch(`/api/p/${id}`).then(r=>r.json()));
+  if(!state.results && !state.isLoading) trigger();
+  if(state.isLoading) return <p>Loading...</p>;
+  return <pre>{JSON.stringify(state.results,null,2)}</pre>
+}
+```
+
+### Pattern: always fetch fresh
+```tsx
+const { state, forceTrigger } = useSharedFunction('server-time', () => fetch('/time').then(r=>r.text()));
+useEffect(()=>{ forceTrigger(); }, [forceTrigger]);
+```
+
+---
+
+## 🛰️ Static APIs (outside React)
+Useful for SSR hydration, event listeners, debugging, imperative workflows.
+
+```ts
+import { sharedStatesApi, sharedFunctionsApi } from 'react-shared-states';
+
+// Preload
+sharedStatesApi.set('bootstrap-data', { user: {...} });
+
+// Read later
+const user = sharedStatesApi.get('bootstrap-data');
+
+// Inspect all
+console.log(sharedStatesApi.getAll()); // Map with prefixed keys
+
+// For shared functions
+const fnState = sharedFunctionsApi.get('profile-123');
+```
+
+API summary:
+| API | Methods |
+|-----|---------|
+| `sharedStatesApi` | `get(key, scope?)`, `set(key,val,scope?)`, `has`, `clear`, `clearAll`, `getAll()` |
+| `sharedFunctionsApi` | `get(key, scope?)` (returns fn state), `set`, `has`, `clear`, `clearAll`, `getAll()` |
+
+`scope` defaults to `"_global"`. Internally keys are stored as `${scope}_${key}`.
+
+---
+
+## 🧩 Scoping Rules Deep Dive
+Resolution order used inside hooks:
+1. Explicit 3rd parameter (`scopeName`)
+2. Nearest `SharedStatesProvider` above the component
+3. The implicit global scope (`_global`)
+
+Unnamed providers auto‑generate a random scope name: each mount = isolated island.
+
+Two providers sharing the same `scopeName` act as a single logical scope even if they are disjoint in the tree (great for portals / microfrontends).
+
+---
+
+## 🛠️ TypeScript Notes
+* Keys are typed as `NonEmptyString`; empty strings are rejected.
+* Return types are inferred directly from your `initialValue` or async function result.
+* No generics needed in typical usage.
+
+---
+
+## 🆚 Comparison Snapshot
+| Criterion | react-shared-states | Redux Toolkit | Zustand |
+|-----------|---------------------|---------------|---------|
+| Setup | Install & call hook | Slice + store config | Create store function |
+| Global state | Yes (by key) | Yes | Yes |
+| Scoped state | Built-in (providers + names + overrides) | Needs custom logic | Needs multiple stores / contexts |
+| Async helper | `useSharedFunction` (cache + status) | Thunks / RTK Query | Manual or middleware |
+| Boilerplate | Near zero | Moderate | Low |
+| Static access | Yes (APIs) | Yes (store) | Yes (store) |
+| Learning curve | Minutes | Higher | Low |
+
+---
+
+## 🧪 Testing Tips
+* Use static APIs to assert state after component interactions.
+* `sharedStatesApi.clearAll()` in `afterEach` to isolate tests.
+* For async functions: trigger once, await UI stabilization, assert `results` present.
+
+---
+
+## ❓ FAQ
+**Q: How do I reset a single shared state?**  
+`sharedStatesApi.clear('key')` or inside component: call a setter with the initial value.
+
+**Q: Can I pre-hydrate data on the server?**  
+Yes. Call `sharedStatesApi.set(...)` during bootstrap, then first client hook usage will pick it up.
+
+**Q: How do I avoid accidental key collisions?**  
+Prefix keys by domain (e.g. `user:profile`, `cart:items`) or rely on provider scoping.
+
+**Q: Why is my async function not re-running?**  
+It's cached. Use `forceTrigger()` or `clear()`.
+
+**Q: Can I use it with Suspense?**  
+Currently no built-in Suspense wrappers; wrap `useSharedFunction` yourself if desired.
+
+---
+
+## 📚 Full API Reference
+### `useSharedState(key, initialValue, scopeName?)`
+Returns `[value, setValue]`.
+
+### `useSharedFunction(key, fn, scopeName?)`
+Returns `{ state, trigger, forceTrigger, clear }`.
+
+### `<SharedStatesProvider scopeName?>`
+Wrap children; optional `scopeName` (string). If omitted a random unique one is generated.
+
+### Static
+`sharedStatesApi`, `sharedFunctionsApi` (see earlier table).
+
+---
+
+## 🤝 Contributing
+PRs & issues welcome: improvements, typings, recipes, docs. Please open a discussion if proposing larger API changes.
+
+---
+
+## 🧑‍💻 Author
+[@HichemTab-tech](https://www.github.com/HichemTab-tech)
+
+## 📄 License
+[MIT](./LICENSE)
 
 ## 🌟 Acknowledgements
+Inspired by React's built-in primitives & the ergonomics of modern lightweight state libraries. Thanks to early adopters for feedback.
 
-Special thanks to the open-source community and early adopters of `react-shared-states` for their feedback, which helped expand support to Webpack alongside Vite.
+---
+
+Happy sharing ✨
