@@ -22,10 +22,6 @@
     "dev:demo": "vite --config demo/vite.config.demo.ts",
     "build:demo": "vite build --config demo/vite.config.demo.ts"
   },
-  "peerDependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
-  },
   "author": "Hichem Taboukouyout <hichem.taboukouyout@hichemtab-tech.me>",
   "repository": {
     "type": "git",
