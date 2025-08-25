@@ -66,14 +66,14 @@ export const useSharedFunction = <T, Args extends unknown[], S extends string = 
 
     sharedFunctionsData.init(key, prefix);
 
-    const state = useSyncExternalStore((listener) => {
+    const state = useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>((listener) => {
         sharedFunctionsData.init(key, prefix);
         sharedFunctionsData.addListener(key, prefix, listener);
 
         return () => {
             sharedFunctionsData.removeListener(key, prefix, listener);
         }
-    }, () => sharedFunctionsData.get(key, prefix)!.fnState);
+    }, () => sharedFunctionsData.get(key, prefix)!.fnState as NonNullable<SharedFunctionsState<T>['fnState']>);
 
     const trigger = async (force: boolean, ...args: Args) => {
         const entry = sharedFunctionsData.get(key, prefix)!;
