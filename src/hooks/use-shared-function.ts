@@ -79,7 +79,6 @@ export const useSharedFunction = <T, Args extends unknown[], S extends string = 
         const entry = sharedFunctionsData.get(key, prefix)!;
         if (!force && (entry.fnState.isLoading || entry.fnState.results !== undefined)) return entry.fnState;
         entry.fnState = { ...entry.fnState, isLoading: true, error: undefined };
-        console.log(sharedFunctionsData.get(key, prefix)?.fnState.isLoading);
         entry.listeners.forEach(l => l());
         try {
             const results: Awaited<T> = await fn(...args);
