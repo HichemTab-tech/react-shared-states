@@ -18,7 +18,7 @@ export default defineConfig({
         lib: {
             entry: resolve(__dirname, 'src/index.ts'), // Library entry point
             name: 'ReactSharedStates',
-            fileName: (format: string) => `main${format === 'es' ? '' : '.min'}.js`,
+            fileName: (format: string) => `main${format === 'es' ? '.esm' : '.min'}.js`,
             formats: ['es', 'umd']
         },
         rollupOptions: {
