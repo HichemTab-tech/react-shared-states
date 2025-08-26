@@ -1,5 +1,16 @@
 import * as React from 'react';
-import {SharedStatesProvider, useSharedFunction, useSharedState} from 'react-shared-states';
+import {
+    SharedStatesProvider,
+    sharedSubscriptionsApi,
+    useSharedFunction,
+    useSharedState,
+    useSharedSubscription
+} from 'react-shared-states';
+import './FakeSharedEmitter';
+import {FakeSharedEmitter} from "./FakeSharedEmitter";
+
+FakeSharedEmitter.intervalDuration = 3000;
+window.sharedSubscriptionsApi = sharedSubscriptionsApi;
 
 const Comp1 = () => {
     const [x, setX] = useSharedState('x', 0);
@@ -26,6 +37,28 @@ const Comp1 = () => {
     );
 }
 
+const Comp2 = () => {
+    const {trigger} = useSharedSubscription('test-sub', (set, onError) => {
+        return FakeSharedEmitter.subscribe("x", (data: string) => {
+            if (data === "do-error") {
+                onError(new Error("Error"));
+                return;
+            }
+            set(data);
+            console.log("data loaded...", data);
+        }, onError)
+    });
+
+
+    return (
+        <div>
+            <h1 className="text-red-600">Comp2</h1>
+            <button onClick={() => trigger()}>subscribe</button>
+            <br/>
+        </div>
+    )
+}
+
 const App = () => {
 
     const [x, setX] = useSharedState('x', 0);
@@ -34,7 +67,7 @@ const App = () => {
         setX(x+1)
     }
     const handle2 = () => {
-        setX2(x2+1);
+        setX2(x-1);
     }
 
     return (
@@ -52,6 +85,7 @@ const App = () => {
                     <Comp1/>
                 </SharedStatesProvider>
             </SharedStatesProvider>
+            {x > 3 && <Comp2/>}
         </div>
     );
 };
