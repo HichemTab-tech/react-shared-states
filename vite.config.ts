@@ -41,5 +41,8 @@ export default defineConfig({
             exclude: ['node_modules', 'dist'], // Exclude unnecessary files
         })
 
-    ]
+    ],
+    define: {
+        __REACT_SHARED_STATES_DEV__: process.env.NODE_ENV === 'development' ? 'true' : 'false',
+    }
 });
