@@ -1,4 +1,6 @@
-import type {AFunction, DataMapValue, NonEmptyString, Prefix} from "./types";
+import type {AFunction, DataMapValue, Prefix} from "./types";
+import {useEffect} from "react";
+import {log} from "./lib/utils";
 
 
 type SharedDataType<T> = DataMapValue & T;
@@ -79,11 +81,23 @@ export abstract class SharedData<T> {
     static prefix(key: string, prefix: Prefix) {
         return `${prefix}_${key}`;
     }
+
+    useEffect(key: string, prefix: Prefix, unsub: (() => void)|null = null) {
+        useEffect(() => {
+            return () => {
+                unsub?.();
+                log(`[${SharedData.prefix(key, prefix)}]`, "unmount effect");
+                if (this.data.get(SharedData.prefix(key, prefix))!.listeners?.length === 0) {
+                    this.clear(key, prefix);
+                }
+            }
+        }, []);
+    }
 }
 
 export interface SharedApi<T> {
-    get: <S extends string = string>(key: NonEmptyString<S>, scopeName: Prefix) => T;
-    set: <S extends string = string>(key: NonEmptyString<S>, value: T, scopeName: Prefix) => void;
+    get: <S extends string = string>(key: S, scopeName: Prefix) => T;
+    set: <S extends string = string>(key: S, value: T, scopeName: Prefix) => void;
     clearAll: () => void;
     clear: (key: string, scopeName: Prefix) => void;
     has: (key: string, scopeName: Prefix) => boolean;

@@ -12,7 +12,7 @@
 [![license](https://img.shields.io/github/license/HichemTab-tech/react-shared-states)](LICENSE)
 
 
-Tiny, ergonomic, convention‑over‑configuration state & async function sharing for React. Global by default, trivially scoped when you need isolation, and opt‑in static APIs when you must touch state outside components. As simple as `useState`, as flexible as Zustand, without boilerplate like Redux.
+Tiny, ergonomic, convention‑over‑configuration state, async function, and real-time subscription sharing for React. Global by default, trivially scoped when you need isolation, and opt‑in static APIs when you must touch state outside components. As simple as `useState`, as flexible as Zustand, without boilerplate like Redux.
 
 ## 🔥 Why this instead of Redux / Zustand / Context soup?
 * 0 config. Just pick a key: `useSharedState('cart', [])`.
@@ -173,14 +173,15 @@ export default function App(){
 
 
 ## 🧠 Core Concepts
-| Concept           | Summary                                                                                                                         |
-|-------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| Global by default | No provider necessary. Same key => shared state.                                                                                |
-| Scoping           | Wrap with `SharedStatesProvider` to isolate. Nearest provider wins.                                                             |
-| Named scopes      | `scopeName` prop lets distant providers sync (same name ⇒ same bucket). Unnamed providers auto‑generate a random isolated name. |
-| Manual override   | Third param in `useSharedState` / `useSharedFunction` enforces a specific scope ignoring tree search.                           |
-| Shared functions  | Encapsulate async logic: single flight + cached result + `error` + `isLoading` + opt‑in refresh.                                |
-| Static APIs       | Access state/functions outside components (`sharedStatesApi`, `sharedFunctionsApi`).                                            |
+| Concept              | Summary                                                                                                                         |
+|----------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| Global by default    | No provider necessary. Same key => shared state.                                                                                |
+| Scoping              | Wrap with `SharedStatesProvider` to isolate. Nearest provider wins.                                                             |
+| Named scopes         | `scopeName` prop lets distant providers sync (same name ⇒ same bucket). Unnamed providers auto‑generate a random isolated name. |
+| Manual override      | Third param in `useSharedState` / `useSharedFunction` / `useSharedSubscription` enforces a specific scope ignoring tree search. |
+| Shared functions     | Encapsulate async logic: single flight + cached result + `error` + `isLoading` + opt‑in refresh.                                |
+| Shared subscriptions | Real-time data streams: automatic cleanup + shared connections + `error` + `isLoading` + subscription state.                    |
+| Static APIs          | Access state/functions/subscriptions outside components (`sharedStatesApi`, `sharedFunctionsApi`, `sharedSubscriptionsApi`).    |
 
 
 ## 🏗️ Sharing State (`useSharedState`)
@@ -248,13 +249,158 @@ const refresh = () => forceTrigger();
 ```
 
 
+## 📡 Real-time Subscriptions (`useSharedSubscription`)
+Perfect for Firebase listeners, WebSocket connections,
+Server-Sent Events, or any streaming data source that needs cleanup.
+
+Signature:
+```ts
+const { state, trigger, unsubscribe } = useSharedSubscription(key, subscriber, scopeName?);
+```
+
+`state` shape: `{ data?: T; isLoading: boolean; error?: unknown; subscribed: boolean }`
+
+The `subscriber` function receives three callbacks:
+- `set(data)`: Update the shared data
+- `onError(error)`: Handle errors 
+- `onCompletion()`: Mark loading as complete
+- Returns: Optional cleanup function (called on unsubscribe/unmount)
+
+### Pattern: Firebase Firestore real-time listener
+```tsx
+import { useEffect } from 'react';
+import { onSnapshot, doc } from 'firebase/firestore';
+import { useSharedSubscription } from 'react-shared-states';
+import { db } from './firebase-config'; // your Firebase config
+
+function UserProfile({ userId }: { userId: string }) {
+  const { state, trigger, unsubscribe } = useSharedSubscription(
+    `user-${userId}`,
+    async (set, onError, onCompletion) => {
+      const userRef = doc(db, 'users', userId);
+      
+      // Set up the real-time listener
+      const unsubscribe = onSnapshot(
+        userRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            set({ id: snapshot.id, ...snapshot.data() });
+          } else {
+            set(null);
+          }
+        },
+        onError,
+        onCompletion
+      );
+      
+      // Return cleanup function
+      return unsubscribe;
+    }
+  );
+
+  // Start listening when component mounts
+  useEffect(() => {
+    trigger();
+  }, []);
+
+  if (state.isLoading) return <div>Connecting...</div>;
+  if (state.error) return <div>Error: {state.error.message}</div>;
+  if (!state.data) return <div>User not found</div>;
+
+  return (
+    <div>
+      <h1>{state.data.name}</h1>
+      <p>{state.data.email}</p>
+      <button onClick={unsubscribe}>Stop listening</button>
+    </div>
+  );
+}
+```
+
+### Pattern: WebSocket connection
+```tsx
+import { useEffect } from 'react';
+import { useSharedSubscription } from 'react-shared-states';
+
+function ChatRoom({ roomId }: { roomId: string }) {
+  const { state, trigger } = useSharedSubscription(
+    `chat-${roomId}`,
+    (set, onError, onCompletion) => {
+      const ws = new WebSocket(`ws://chat-server/${roomId}`);
+      
+      ws.onopen = () => onCompletion();
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        set(prev => [...(prev || []), message]);
+      };
+      ws.onerror = onError;
+      
+      return () => ws.close();
+    }
+  );
+
+  useEffect(() => {
+    trigger();
+  }, []);
+
+  return (
+    <div>
+      {state.isLoading && <p>Connecting to chat...</p>}
+      {state.error && <p>Connection failed</p>}
+      <div>
+        {state.data?.map(msg => (
+          <div key={msg.id}>{msg.text}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### Pattern: Server-Sent Events
+```tsx
+import { useEffect } from 'react';
+import { useSharedSubscription } from 'react-shared-states';
+
+function LiveUpdates() {
+  const { state, trigger } = useSharedSubscription(
+    'live-updates',
+    (set, onError, onCompletion) => {
+      const eventSource = new EventSource('/api/live-updates');
+      
+      eventSource.onopen = () => onCompletion();
+      eventSource.onmessage = (event) => {
+        set(JSON.parse(event.data));
+      };
+      eventSource.onerror = onError;
+      
+      return () => eventSource.close();
+    }
+  );
+
+  useEffect(() => {
+    trigger();
+  }, []);
+
+  return <div>Latest: {JSON.stringify(state.data)}</div>;
+}
+```
+
+Subscription semantics:
+* First `trigger()` establishes the subscription; subsequent calls do nothing if already subscribed.
+* Multiple components with the same key+scope share one subscription + data stream.
+* `unsubscribe()` closes the connection and clears the subscribed state.
+* Automatic cleanup on component unmount when no other components are listening.
+* Components mounting later instantly get the latest `data` without re-subscribing.
+
+
 ## 🛰️ Static APIs (outside React)
 Useful for SSR hydration, event listeners, debugging, imperative workflows.
 
 ```ts
-import { sharedStatesApi, sharedFunctionsApi } from 'react-shared-states';
+import { sharedStatesApi, sharedFunctionsApi, sharedSubscriptionsApi } from 'react-shared-states';
 
-// Preload
+// Preload state
 sharedStatesApi.set('bootstrap-data', { user: {...} });
 
 // Read later
@@ -265,14 +411,18 @@ console.log(sharedStatesApi.getAll()); // Map with prefixed keys
 
 // For shared functions
 const fnState = sharedFunctionsApi.get('profile-123');
+
+// For shared subscriptions
+const subState = sharedSubscriptionsApi.get('live-chat');
 ```
 
 ## API summary:
 
-| API                  | Methods                                                                              |
-|----------------------|--------------------------------------------------------------------------------------|
-| `sharedStatesApi`    | `get(key, scope?)`, `set(key,val,scope?)`, `has`, `clear`, `clearAll`, `getAll()`    |
-| `sharedFunctionsApi` | `get(key, scope?)` (returns fn state), `set`, `has`, `clear`, `clearAll`, `getAll()` |
+| API                      | Methods                                                                               |
+|--------------------------|---------------------------------------------------------------------------------------|
+| `sharedStatesApi`        | `get(key, scope?)`, `set(key,val,scope?)`, `has`, `clear`, `clearAll`, `getAll()`     |
+| `sharedFunctionsApi`     | `get(key, scope?)` (returns fn state), `set`, `has`, `clear`, `clearAll`, `getAll()`  |
+| `sharedSubscriptionsApi` | `get(key, scope?)` (returns sub state), `set`, `has`, `clear`, `clearAll`, `getAll()` |
 
 `scope` defaults to `"_global"`. Internally keys are stored as `${scope}_${key}`.
 
@@ -302,8 +452,9 @@ Two providers sharing the same `scopeName` act as a single logical scope even if
 
 ## 🧪 Testing Tips
 * Use static APIs to assert state after component interactions.
-* `sharedStatesApi.clearAll()` in `afterEach` to isolate tests.
+* `sharedStatesApi.clearAll()`, `sharedFunctionsApi.clearAll()`, `sharedSubscriptionsApi.clearAll()` in `afterEach` to isolate tests.
 * For async functions: trigger once, await UI stabilization, assert `results` present.
+* For subscriptions: mock the subscription source (Firebase, WebSocket, etc.) and verify data flow.
 
 
 ## ❓ FAQ
@@ -319,6 +470,9 @@ Prefix keys by domain (e.g. `user:profile`, `cart:items`) or rely on provider sc
 **Q: Why is my async function not re-running?**  
 It's cached. Use `forceTrigger()` or `clear()`.
 
+**Q: How do I handle subscription cleanup?**  
+Subscriptions auto-cleanup when no components are listening. You can also manually call `unsubscribe()`.
+
 **Q: Can I use it with Suspense?**  
 Currently no built-in Suspense wrappers; wrap `useSharedFunction` yourself if desired.
 
@@ -330,11 +484,14 @@ Returns `[value, setValue]`.
 ### `useSharedFunction(key, fn, scopeName?)`
 Returns `{ state, trigger, forceTrigger, clear }`.
 
+### `useSharedSubscription(key, subscriber, scopeName?)`
+Returns `{ state, trigger, unsubscribe }`.
+
 ### `<SharedStatesProvider scopeName?>`
 Wrap children; optional `scopeName` (string). If omitted a random unique one is generated.
 
 ### Static
-`sharedStatesApi`, `sharedFunctionsApi` (see earlier table).
+`sharedStatesApi`, `sharedFunctionsApi`, `sharedSubscriptionsApi` (see earlier table).
 
 
 
