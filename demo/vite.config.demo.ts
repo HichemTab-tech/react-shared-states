@@ -19,4 +19,7 @@ export default defineConfig({
     plugins: [
         react(),
     ],
+    define: {
+        __REACT_SHARED_STATES_DEV__: process.env.NODE_ENV === 'development' ? 'true' : 'false',
+    }
 });
