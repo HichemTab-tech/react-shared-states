@@ -1,23 +1,24 @@
-import type {AFunction, NonEmptyString, PotentialPromise, Prefix} from "../types";
-import {useSyncExternalStore} from "react";
+import type {PotentialPromise, Prefix} from "../types";
+import {useEffect, useMemo, useSyncExternalStore} from "react";
 import {type SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
-import {log} from "../lib/utils";
+import {ensureNonEmptyString, log} from "../lib/utils";
 
 type Unsubscribe = () => void;
-namespace SubscriberEvents{
+export namespace SubscriberEvents{
     export type OnError = (error: unknown) => void;
+    export type OnCompletion = () => void;
     export type Set<T> = (value: T) => void
 }
 
-type Subscriber<T> = (set: SubscriberEvents.Set<T>, onError: SubscriberEvents.OnError) => PotentialPromise<Unsubscribe | void | undefined>;
+type Subscriber<T> = (set: SubscriberEvents.Set<T>, onError: SubscriberEvents.OnError, onCompletion: SubscriberEvents.OnCompletion) => PotentialPromise<Unsubscribe | void | undefined>;
 
 type SharedSubscriptionsState<T> = {
     fnState: {
         data?: T;
         isLoading: boolean;
         error?: unknown;
-        track: number
+        subscribed: boolean
     },
     unsubscribe?: Unsubscribe | void;
 }
@@ -29,7 +30,7 @@ class SharedSubscriptionsData extends SharedData<SharedSubscriptionsState<unknow
                 data: undefined,
                 isLoading: false,
                 error: undefined,
-                track: 0,
+                subscribed: false,
             }
         };
     }
@@ -42,22 +43,39 @@ class SharedSubscriptionsData extends SharedData<SharedSubscriptionsState<unknow
         super.setValue(key, prefix, data);
     }
 
-    removeListener(key: string, prefix: Prefix, listener: AFunction) {
-        super.removeListener(key, prefix, listener);
-        /*const entry = this.get(key, prefix);
-        if (entry?.listeners.length === 0) {
-            entry.unsubscribe?.();
-            entry.unsubscribe = undefined;
-        }*/
+    useEffect(key: string, prefix: Prefix) {
+        useEffect(() => {
+            return () => {
+                log(`[${SharedData.prefix(key, prefix)}]`, "unmount effect2");
+                const entry = this.get(key, prefix);
+                if (entry?.listeners.length === 0) {
+                    void this.unsubscribe(key, prefix);
+                }
+            }
+        }, []);
+        super.useEffect(key, prefix);
+    }
+
+    async unsubscribe(key: string, prefix: Prefix) {
+        const entry = this.get(key, prefix);
+        if (entry) {
+            if (entry.unsubscribe) {
+                entry.unsubscribe();
+                entry.unsubscribe = undefined;
+            }
+            entry.fnState.subscribed = false;
+        }
     }
 }
 
 export class SharedSubscriptionsApi implements SharedApi<SharedSubscriptionsState<unknown>>{
-    get<T, S extends string = string>(key: NonEmptyString<S>, scopeName: Prefix = "_global") {
+    get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
+        key = ensureNonEmptyString(key);
         const prefix: Prefix = scopeName || "_global";
         return sharedSubscriptionsData.get(key, prefix)?.fnState as T;
     }
-    set<T, S extends string = string>(key: NonEmptyString<S>, fnState: SharedSubscriptionsState<T>, scopeName: Prefix = "_global") {
+    set<T, S extends string = string>(key: S, fnState: SharedSubscriptionsState<T>, scopeName: Prefix = "_global") {
+        key = ensureNonEmptyString(key);
         const prefix: Prefix = scopeName || "_global";
         sharedSubscriptionsData.setValue(key, prefix, fnState);
     }
@@ -81,24 +99,40 @@ export const sharedSubscriptionsApi = new SharedSubscriptionsApi();
 
 const sharedSubscriptionsData = new SharedSubscriptionsData();
 
-export const useSharedSubscription = <T, S extends string = string>(key: NonEmptyString<S>, subscriber: Subscriber<T>, scopeName?: Prefix) => {
+export const useSharedSubscription = <T, S extends string = string>(key: S, subscriber: Subscriber<T>, scopeName?: Prefix) => {
+
+    key = ensureNonEmptyString(key);
 
     const {prefix} = useShared(scopeName);
 
     sharedSubscriptionsData.init(key, prefix);
 
-    const state = useSyncExternalStore<NonNullable<SharedSubscriptionsState<T>['fnState']>>((listener) => {
-        sharedSubscriptionsData.init(key, prefix);
-        sharedSubscriptionsData.addListener(key, prefix, listener);
+    const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedSubscriptionsState<T>['fnState']>>>[0]>(
+        () =>
+            (listener) => {
+                sharedSubscriptionsData.init(key, prefix);
+                sharedSubscriptionsData.addListener(key, prefix, listener);
 
-        return () => {
-            sharedSubscriptionsData.removeListener(key, prefix, listener);
-        }
-    }, () => sharedSubscriptionsData.get(key, prefix)!.fnState as NonNullable<SharedSubscriptionsState<T>['fnState']>);
+                return () => {
+                    sharedSubscriptionsData.removeListener(key, prefix, listener);
+                }
+            },
+        []
+    );
+
+    const externalStoreSnapshotGetter = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedSubscriptionsState<T>['fnState']>>>[1]>(
+        () =>
+            () =>
+                sharedSubscriptionsData.get(key, prefix)!.fnState as NonNullable<SharedSubscriptionsState<T>['fnState']>,
+        []
+    );
+
+
+    const state = useSyncExternalStore<NonNullable<SharedSubscriptionsState<T>['fnState']>>(externalStoreSubscriber, externalStoreSnapshotGetter);
 
     const set = (value: T) => {
         const entry = sharedSubscriptionsData.get(key, prefix)!;
-        entry.fnState = { ...entry.fnState, data: value, track: entry.fnState.track + 1 };
+        entry.fnState = { ...entry.fnState, data: value };
         entry.listeners.forEach(l => l());
     }
 
@@ -108,27 +142,32 @@ export const useSharedSubscription = <T, S extends string = string>(key: NonEmpt
         entry.listeners.forEach(l => l());
     }
 
+    const onComplete = () => {
+        const entry = sharedSubscriptionsData.get(key, prefix)!;
+        entry.fnState = { ...entry.fnState, isLoading: false };
+        entry.listeners.forEach(l => l());
+    }
+
     const trigger = async (force: boolean) => {
         const entry = sharedSubscriptionsData.get(key, prefix)!;
         if (force) {
-            const unsubscribe = entry.unsubscribe;
-            if (unsubscribe) {
-                unsubscribe();
-                entry.unsubscribe = undefined;
-            }
-            entry.fnState = { ...entry.fnState, isLoading: false, data: undefined, error: undefined };
+            await sharedSubscriptionsData.unsubscribe(key, prefix);
+            entry.fnState = { ...entry.fnState, isLoading: false, data: undefined, error: undefined, subscribed: false };
         }
-        if (entry.fnState.isLoading || entry.fnState.data !== undefined) return entry.fnState;
+        if (entry.fnState.subscribed) return entry.fnState;
         log("triggered !!");
         entry.fnState = { ...entry.fnState, isLoading: true, error: undefined };
         entry.listeners.forEach(l => l());
         try {
-            entry.unsubscribe = await subscriber(set, onError);
+            entry.unsubscribe = await subscriber(set, onError, onComplete);
+            entry.fnState.subscribed = true;
         } catch (error) {
             entry.fnState = { ...entry.fnState, isLoading: false, error };
         }
         entry.listeners.forEach(l => l());
     };
+
+    sharedSubscriptionsData.useEffect(key, prefix);
 
     // noinspection JSUnusedGlobalSymbols
     return {
@@ -140,7 +179,7 @@ export const useSharedSubscription = <T, S extends string = string>(key: NonEmpt
             void trigger(true);
         },
         unsubscribe: () => {
-            //TODO: think of something
+            void sharedSubscriptionsData.unsubscribe(key, prefix);
         }
     } as const;
 };

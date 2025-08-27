@@ -1,5 +1,6 @@
 type Callback<T> = {
-    onSuccess: (data: T) => void
+    onNext: (data: T) => void
+    onCompletion?: () => void
     onError?: (error: unknown) => void
 }
 
@@ -17,7 +18,7 @@ export const FakeSharedEmitter = (() => {
         const interval = setInterval(() => {
             const data = `${key} - ${Math.floor(Math.random() * 1000)}`;
             console.log("pushing through subscriber...");
-            listeners.get(key)?.callbacks.forEach((cb) => cb.onSuccess(data));
+            listeners.get(key)?.callbacks.forEach((cb) => cb.onNext(data));
         }, intervalDuration ?? (1000 + Math.random() * 2000));
 
         listeners.set(key, {
@@ -26,13 +27,18 @@ export const FakeSharedEmitter = (() => {
         });
     }
 
-    function subscribe<T>(key: string, onSuccess: Callback<T>['onSuccess'], onError?: Callback<T>['onError']) {
+    async function subscribe<T>(key: string, onNext: Callback<T>['onNext'], onError?: Callback<T>['onError'], onCompletion?: Callback<T>['onCompletion']) {
         if (!listeners.has(key)) start(key);
 
         const callback = {
-            onSuccess,
+            onNext,
             onError,
+            onCompletion
         }
+
+        await fakeAwait(1000);
+        callback.onCompletion?.();
+
         const entry = listeners.get(key)!;
         entry.callbacks.push(callback);
 
@@ -47,7 +53,7 @@ export const FakeSharedEmitter = (() => {
 
     function forcePush(key: string, value: any) {
         if (listeners.has(key)) {
-            listeners.get(key)!.callbacks.forEach((cb) => cb.onSuccess(value));
+            listeners.get(key)!.callbacks.forEach((cb) => cb.onNext(value));
         }
     }
 
@@ -72,5 +78,7 @@ export const FakeSharedEmitter = (() => {
         intervalDuration
     };
 })();
+
+const fakeAwait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 window.FakeSharedEmitter = FakeSharedEmitter;

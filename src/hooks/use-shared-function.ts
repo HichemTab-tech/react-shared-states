@@ -1,7 +1,8 @@
-import type {AFunction, NonEmptyString, Prefix} from "../types";
-import {useSyncExternalStore} from "react";
+import type {AFunction, Prefix} from "../types";
+import {useMemo, useSyncExternalStore} from "react";
 import {type SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
+import {ensureNonEmptyString} from "../lib/utils";
 
 type SharedFunctionsState<T> = {
     fnState: {
@@ -32,11 +33,13 @@ class SharedFunctionsData extends SharedData<SharedFunctionsState<unknown>> {
 }
 
 export class SharedFunctionsApi implements SharedApi<SharedFunctionsState<unknown>>{
-    get<T, S extends string = string>(key: NonEmptyString<S>, scopeName: Prefix = "_global") {
+    get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
+        key = ensureNonEmptyString(key);
         const prefix: Prefix = scopeName || "_global";
         return sharedFunctionsData.get(key, prefix)?.fnState as T;
     }
-    set<T, S extends string = string>(key: NonEmptyString<S>, fnState: SharedFunctionsState<T>, scopeName: Prefix = "_global") {
+    set<T, S extends string = string>(key: S, fnState: SharedFunctionsState<T>, scopeName: Prefix = "_global") {
+        key = ensureNonEmptyString(key);
         const prefix: Prefix = scopeName || "_global";
         sharedFunctionsData.setValue(key, prefix, fnState);
     }
@@ -60,20 +63,34 @@ export const sharedFunctionsApi = new SharedFunctionsApi();
 
 const sharedFunctionsData = new SharedFunctionsData();
 
-export const useSharedFunction = <T, Args extends unknown[], S extends string = string>(key: NonEmptyString<S>, fn: AFunction<T, Args>, scopeName?: Prefix) => {
+export const useSharedFunction = <T, Args extends unknown[], S extends string = string>(key: S, fn: AFunction<T, Args>, scopeName?: Prefix) => {
 
+    key = ensureNonEmptyString(key);
     const {prefix} = useShared(scopeName);
 
     sharedFunctionsData.init(key, prefix);
 
-    const state = useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>((listener) => {
-        sharedFunctionsData.init(key, prefix);
-        sharedFunctionsData.addListener(key, prefix, listener);
+    const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>>[0]>(
+        () =>
+            (listener) => {
+                sharedFunctionsData.init(key, prefix);
+                sharedFunctionsData.addListener(key, prefix, listener);
 
-        return () => {
-            sharedFunctionsData.removeListener(key, prefix, listener);
-        }
-    }, () => sharedFunctionsData.get(key, prefix)!.fnState as NonNullable<SharedFunctionsState<T>['fnState']>);
+                return () => {
+                    sharedFunctionsData.removeListener(key, prefix, listener);
+                }
+            },
+        []
+    );
+
+    const externalStoreSnapshotGetter = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>>[1]>(
+        () =>
+            () =>
+                sharedFunctionsData.get(key, prefix)!.fnState as NonNullable<SharedFunctionsState<T>['fnState']>,
+        []
+    );
+
+    const state = useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>(externalStoreSubscriber, externalStoreSnapshotGetter);
 
     const trigger = async (force: boolean, ...args: Args) => {
         const entry = sharedFunctionsData.get(key, prefix)!;
@@ -88,6 +105,8 @@ export const useSharedFunction = <T, Args extends unknown[], S extends string = 
         }
         entry.listeners.forEach(l => l());
     };
+
+    sharedFunctionsData.useEffect(key, prefix);
 
     // noinspection JSUnusedGlobalSymbols
     return {

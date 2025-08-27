@@ -1,7 +1,8 @@
-import {useSyncExternalStore} from "react";
-import type {NonEmptyString, Prefix} from "../types";
+import {useMemo, useSyncExternalStore} from "react";
+import type {AFunction, Prefix} from "../types";
 import {type SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
+import {ensureNonEmptyString} from "../lib/utils";
 
 class SharedStatesData extends SharedData<{
     value: unknown
@@ -17,16 +18,22 @@ class SharedStatesData extends SharedData<{
     setValue(key: string, prefix: Prefix, value: unknown) {
         super.setValue(key, prefix, {value});
     }
+
+    removeListener(key: string, prefix: Prefix, listener: AFunction) {
+        super.removeListener(key, prefix, listener);
+    }
 }
 
 class SharedStatesApi implements SharedApi<{
     value: unknown
 }>{
-    get<T, S extends string = string>(key: NonEmptyString<S>, scopeName: Prefix = "_global") {
+    get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
+        key = ensureNonEmptyString(key);
         const prefix: Prefix = scopeName || "_global";
         return sharedStatesData.get(key, prefix)?.value as T;
     }
-    set<T, S extends string = string>(key: NonEmptyString<S>, value: T, scopeName: Prefix = "_global") {
+    set<T, S extends string = string>(key: S, value: T, scopeName: Prefix = "_global") {
+        key = ensureNonEmptyString(key);
         const prefix: Prefix = scopeName || "_global";
         sharedStatesData.setValue(key, prefix, {value});
     }
@@ -50,20 +57,27 @@ export const sharedStatesApi = new SharedStatesApi();
 
 const sharedStatesData = new SharedStatesData();
 
-export const useSharedState = <T, S extends string = string>(key: NonEmptyString<S>, value: T, scopeName?: Prefix) => {
 
+
+export const useSharedState = <T, S extends string = string>(key: S, value: T, scopeName?: Prefix) => {
+
+    key = ensureNonEmptyString(key);
     const {prefix} = useShared(scopeName);
 
     sharedStatesData.init(key, prefix, value);
 
-    const dataValue = useSyncExternalStore((listener) => {
+    const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore>[0]>(() => (listener) => {
         sharedStatesData.init(key, prefix, value);
         sharedStatesData.addListener(key, prefix, listener);
 
         return () => {
             sharedStatesData.removeListener(key, prefix, listener);
         }
-    }, () => sharedStatesData.get(key, prefix)?.value as T);
+    }, []);
+
+    const externalStoreSnapshotGetter = useMemo(() => () => sharedStatesData.get(key, prefix)?.value as T, []);
+
+    const dataValue = useSyncExternalStore(externalStoreSubscriber, externalStoreSnapshotGetter);
 
     const setData = (newValueOrCallbackToNewValue: T|((prev: T) => T)) => {
         const newValue = (typeof newValueOrCallbackToNewValue === "function") ? (newValueOrCallbackToNewValue as (prev: T) => T)(sharedStatesData.get(key, prefix)?.value as T) : newValueOrCallbackToNewValue
@@ -72,6 +86,8 @@ export const useSharedState = <T, S extends string = string>(key: NonEmptyString
             sharedStatesData.callListeners(key, prefix);
         }
     }
+
+    sharedStatesData.useEffect(key, prefix);
 
     return [
         dataValue,
