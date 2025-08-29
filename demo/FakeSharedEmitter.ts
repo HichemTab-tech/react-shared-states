@@ -36,7 +36,10 @@ export const FakeSharedEmitter = (() => {
             onCompletion
         }
 
-        await fakeAwait(1000);
+        //TODO add persistance
+        console.log("start loading")
+        await fakeAwait(2000);
+        console.log("connected")
         callback.onCompletion?.();
 
         const entry = listeners.get(key)!;

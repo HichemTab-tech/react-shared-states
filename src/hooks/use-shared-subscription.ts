@@ -1,6 +1,6 @@
 import type {PotentialPromise, Prefix} from "../types";
 import {useEffect, useMemo, useSyncExternalStore} from "react";
-import {type SharedApi, SharedData} from "../SharedData";
+import {SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
 import {ensureNonEmptyString, log} from "../lib/utils";
 
@@ -68,7 +68,7 @@ class SharedSubscriptionsData extends SharedData<SharedSubscriptionsState<unknow
     }
 }
 
-export class SharedSubscriptionsApi implements SharedApi<SharedSubscriptionsState<unknown>>{
+export class SharedSubscriptionsApi extends SharedApi<SharedSubscriptionsState<unknown>>{
     get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
         key = ensureNonEmptyString(key);
         const prefix: Prefix = scopeName || "_global";
@@ -79,25 +79,11 @@ export class SharedSubscriptionsApi implements SharedApi<SharedSubscriptionsStat
         const prefix: Prefix = scopeName || "_global";
         sharedSubscriptionsData.setValue(key, prefix, fnState);
     }
-    clearAll() {
-        sharedSubscriptionsData.clearAll();
-    }
-    clear(key: string, scopeName: Prefix = "_global") {
-        const prefix: Prefix = scopeName || "_global";
-        sharedSubscriptionsData.clear(key, prefix);
-    }
-    has(key: string, scopeName: Prefix = "_global") {
-        const prefix: Prefix = scopeName || "_global";
-        return Boolean(sharedSubscriptionsData.has(key, prefix));
-    }
-    getAll() {
-        return sharedSubscriptionsData.data;
-    }
 }
 
-export const sharedSubscriptionsApi = new SharedSubscriptionsApi();
-
 const sharedSubscriptionsData = new SharedSubscriptionsData();
+
+export const sharedSubscriptionsApi = new SharedSubscriptionsApi(sharedSubscriptionsData);
 
 export const useSharedSubscription = <T, S extends string = string>(key: S, subscriber: Subscriber<T>, scopeName?: Prefix) => {
 

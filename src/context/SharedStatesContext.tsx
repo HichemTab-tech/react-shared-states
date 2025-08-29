@@ -12,6 +12,7 @@ interface SharedStatesProviderProps<T extends string = string> extends PropsWith
 }
 
 export const SharedStatesProvider = <T extends string = string>({ children, scopeName }: SharedStatesProviderProps<T>) => {
+    if (scopeName && scopeName.includes("//")) throw new Error("scopeName cannot contain '//'");
 
     if (!scopeName) scopeName = useMemo(() => Math.random().toString(36).substring(2, 15) as NonNullable<SharedStatesProviderProps<T>['scopeName']>, []);
 
