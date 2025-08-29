@@ -1,6 +1,6 @@
 import type {AFunction, Prefix} from "../types";
 import {useMemo, useSyncExternalStore} from "react";
-import {type SharedApi, SharedData} from "../SharedData";
+import {SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
 import {ensureNonEmptyString} from "../lib/utils";
 
@@ -32,7 +32,7 @@ class SharedFunctionsData extends SharedData<SharedFunctionsState<unknown>> {
     }
 }
 
-export class SharedFunctionsApi implements SharedApi<SharedFunctionsState<unknown>>{
+export class SharedFunctionsApi extends SharedApi<SharedFunctionsState<unknown>>{
     get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
         key = ensureNonEmptyString(key);
         const prefix: Prefix = scopeName || "_global";
@@ -43,25 +43,11 @@ export class SharedFunctionsApi implements SharedApi<SharedFunctionsState<unknow
         const prefix: Prefix = scopeName || "_global";
         sharedFunctionsData.setValue(key, prefix, fnState);
     }
-    clearAll() {
-        sharedFunctionsData.clearAll();
-    }
-    clear(key: string, scopeName: Prefix = "_global") {
-        const prefix: Prefix = scopeName || "_global";
-        sharedFunctionsData.clear(key, prefix);
-    }
-    has(key: string, scopeName: Prefix = "_global") {
-        const prefix: Prefix = scopeName || "_global";
-        return Boolean(sharedFunctionsData.has(key, prefix));
-    }
-    getAll() {
-        return sharedFunctionsData.data;
-    }
 }
 
-export const sharedFunctionsApi = new SharedFunctionsApi();
-
 const sharedFunctionsData = new SharedFunctionsData();
+
+export const sharedFunctionsApi = new SharedFunctionsApi(sharedFunctionsData);
 
 export const useSharedFunction = <T, Args extends unknown[], S extends string = string>(key: S, fn: AFunction<T, Args>, scopeName?: Prefix) => {
 

@@ -16,6 +16,8 @@ window.sharedSubscriptionsApi = sharedSubscriptionsApi;
 window.sharedFunctionsApi = sharedFunctionsApi;
 window.sharedStatesApi = sharedStatesApi;
 
+sharedStatesApi.set("x", 55);
+
 const Comp1 = () => {
     const [x, setX] = useSharedState('x', 0);
     const handle = (by = 1) => {
@@ -42,8 +44,9 @@ const Comp1 = () => {
     );
 }
 
-const Comp2 = () => {
-    const {state, trigger, unsubscribe} = useSharedSubscription<string>('test-sub', (set, onError, onCompletion) => {
+const use = () => {
+    return useSharedSubscription<string>('test-sub', (set, onError, onCompletion) => {
+
         return FakeSharedEmitter.subscribe("x", (data: string) => {
             if (data === "do-error") {
                 onError(new Error("Error"));
@@ -52,12 +55,17 @@ const Comp2 = () => {
             set(data);
             console.log("data loaded...", data);
         }, onError, onCompletion)
+
     });
+}
+
+const Comp2 = () => {
+    const {state, trigger, unsubscribe} = use();
 
 
     return (
         <div>
-            <h1 className="text-red-600">Comp2</h1>
+            <h1 className="text-red-600">Comp2 - {state.isLoading && "loading"}</h1>
             <button onClick={() => trigger()}>subscribe</button>
             <button onClick={() => unsubscribe()}>unsubscribe</button>
             results: {state.data}
@@ -87,16 +95,17 @@ const App = () => {
             <button onClick={() => handle()}>Increment x: {x}</button>
             <br/>
             <Comp1/>
+            <SharedStatesProvider scopeName="aaa">
+                <Comp1/>
+                {x > 1 && <Comp1/>}
+                {x > 3 && <Comp2/>}
+                {x > 6 && <Comp2/>}
+            </SharedStatesProvider>
+
             <SharedStatesProvider>
                 <Comp1/>
                 <Comp1/>
-                <SharedStatesProvider>
-                    <Comp1/>
-                    <Comp1/>
-                </SharedStatesProvider>
             </SharedStatesProvider>
-            {x > 3 && <Comp2/>}
-            {x > 6 && <Comp2/>}
         </div>
     );
 };

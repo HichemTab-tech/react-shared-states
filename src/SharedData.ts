@@ -1,6 +1,6 @@
 import type {AFunction, DataMapValue, Prefix} from "./types";
 import {useEffect} from "react";
-import {log} from "./lib/utils";
+import {ensureNonEmptyString, log} from "./lib/utils";
 
 
 type SharedDataType<T> = DataMapValue & T;
@@ -79,7 +79,12 @@ export abstract class SharedData<T> {
     }
 
     static prefix(key: string, prefix: Prefix) {
-        return `${prefix}_${key}`;
+        if (key.includes("//")) throw new Error("key cannot contain '//'");
+        return `${prefix}//${key}`;
+    }
+
+    static extractPrefix(mapKey: string) {
+        return mapKey.split("//");
     }
 
     useEffect(key: string, prefix: Prefix, unsub: (() => void)|null = null) {
@@ -95,11 +100,85 @@ export abstract class SharedData<T> {
     }
 }
 
-export interface SharedApi<T> {
-    get: <S extends string = string>(key: S, scopeName: Prefix) => T;
-    set: <S extends string = string>(key: S, value: T, scopeName: Prefix) => void;
-    clearAll: () => void;
-    clear: (key: string, scopeName: Prefix) => void;
-    has: (key: string, scopeName: Prefix) => boolean;
-    getAll: () => Map<string, DataMapValue>;
+// noinspection JSUnusedGlobalSymbols
+export class SharedApi<T>{
+    constructor(private sharedData: SharedData<T>) {}
+
+    /**
+     * get a value from the shared data
+     * @param key
+     * @param scopeName
+     */
+    get<S extends string = string>(key: S, scopeName: Prefix) {
+        key = ensureNonEmptyString(key);
+        const prefix: Prefix = scopeName || "_global";
+        return this.sharedData.get(key, prefix) as T;
+    }
+
+    /**
+     * set a value in the shared data
+     * @param key
+     * @param value
+     * @param scopeName
+     */
+    set<S extends string = string>(key: S, value: T, scopeName: Prefix) {
+        key = ensureNonEmptyString(key);
+        const prefix: Prefix = scopeName || "_global";
+        this.sharedData.setValue(key, prefix, value);
+    }
+
+    /**
+     * clear all values from the shared data
+     */
+    clearAll() {
+        this.sharedData.clearAll();
+    }
+
+    /**
+     * clear all values from the shared data in a scope
+     * @param scopeName
+     */
+    clearScope(scopeName?: Prefix) {
+        const prefixToSearch: Prefix = scopeName || "_global";
+        this.sharedData.data.forEach((_, key) => {
+            const [prefix] = SharedData.extractPrefix(key);
+            if (prefix === prefixToSearch) {
+                this.sharedData.clear(key, prefix);
+                return;
+            }
+        });
+    }
+
+    /**
+     * clear a value from the shared data
+     * @param key
+     * @param scopeName
+     */
+    clear(key: string, scopeName: Prefix) {
+        const prefix: Prefix = scopeName || "_global";
+        this.sharedData.clear(key, prefix);
+    }
+
+    /**
+     * check if a value exists in the shared data
+     * @param key
+     * @param scopeName
+     */
+    has(key: string, scopeName: Prefix = "_global") {
+        const prefix: Prefix = scopeName || "_global";
+        return Boolean(this.sharedData.has(key, prefix));
+    }
+
+    /**
+     * get all values from the shared data
+     */
+    getAll() {
+        const all: Record<string, Record<string, any>> = {};
+        this.sharedData.data.forEach((value, key) => {
+            const [prefix, keyWithoutPrefix] = SharedData.extractPrefix(key);
+            all[prefix] = all[prefix] || {};
+            all[prefix][keyWithoutPrefix] = value;
+        });
+        return all;
+    }
 }

@@ -1,6 +1,6 @@
 import {useMemo, useSyncExternalStore} from "react";
 import type {AFunction, Prefix} from "../types";
-import {type SharedApi, SharedData} from "../SharedData";
+import {SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
 import {ensureNonEmptyString} from "../lib/utils";
 
@@ -24,7 +24,7 @@ class SharedStatesData extends SharedData<{
     }
 }
 
-class SharedStatesApi implements SharedApi<{
+class SharedStatesApi extends SharedApi<{
     value: unknown
 }>{
     get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
@@ -37,25 +37,11 @@ class SharedStatesApi implements SharedApi<{
         const prefix: Prefix = scopeName || "_global";
         sharedStatesData.setValue(key, prefix, {value});
     }
-    clearAll() {
-        sharedStatesData.clearAll();
-    }
-    clear(key: string, scopeName: Prefix = "_global") {
-        const prefix: Prefix = scopeName || "_global";
-        sharedStatesData.clear(key, prefix);
-    }
-    has(key: string, scopeName: Prefix = "_global") {
-        const prefix: Prefix = scopeName || "_global";
-        return Boolean(sharedStatesData.has(key, prefix));
-    }
-    getAll() {
-        return sharedStatesData.data;
-    }
 }
 
-export const sharedStatesApi = new SharedStatesApi();
-
 const sharedStatesData = new SharedStatesData();
+
+export const sharedStatesApi = new SharedStatesApi(sharedStatesData);
 
 
 
