@@ -16,6 +16,7 @@
   "module": "dist/main.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "bump": "node scripts/bumper.js",
     "build": "vite build",
     "test": "vitest",
     "preview": "vite preview",
