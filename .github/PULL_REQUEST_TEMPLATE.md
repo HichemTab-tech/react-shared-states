@@ -2,8 +2,6 @@
 
 Please describe the purpose of this PR. What problem is being solved, or what feature is being added?
 
----
-
 ## 🧑‍💻 Changes
 
 Please list the changes introduced by this PR. You can format them as bullet points:
@@ -11,8 +9,6 @@ Please list the changes introduced by this PR. You can format them as bullet poi
 - Change 1 (e.g., Added new feature X)
 - Change 2 (e.g., Fixed bug Y)
 - Change 3 (e.g., Updated dependencies)
-
----
 
 ## 🛠️ Fixes or Features
 
