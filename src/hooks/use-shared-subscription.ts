@@ -1,8 +1,8 @@
-import type {PotentialPromise, Prefix} from "../types";
+import type {PotentialPromise, Prefix, SharedCreated} from "../types";
 import {useEffect, useMemo, useSyncExternalStore} from "react";
 import {SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
-import {ensureNonEmptyString, log} from "../lib/utils";
+import {ensureNonEmptyString, log, random} from "../lib/utils";
 
 type Unsubscribe = () => void;
 export namespace SubscriberEvents{
@@ -85,22 +85,60 @@ const sharedSubscriptionsData = new SharedSubscriptionsData();
 
 export const sharedSubscriptionsApi = new SharedSubscriptionsApi(sharedSubscriptionsData);
 
-export const useSharedSubscription = <T, S extends string = string>(key: S, subscriber: Subscriber<T>, scopeName?: Prefix) => {
+interface SharedSubscriptionCreated<T> extends SharedCreated{
+    subscriber: Subscriber<T>
+}
 
-    key = ensureNonEmptyString(key);
+export const createSharedSubscription = <T, Args extends unknown[]>(subscriber: Subscriber<T>, scopeName?: Prefix): SharedSubscriptionCreated<T> => {
+    const prefix: Prefix = scopeName ?? scopeName ?? "_global";
 
-    const {prefix} = useShared(scopeName);
+    return {
+        key: random(),
+        prefix,
+        subscriber,
+    }
+}
 
-    sharedSubscriptionsData.init(key, prefix);
+export type SharedSubscriptionStateReturn<T> = {
+    readonly state: NonNullable<SharedSubscriptionsState<T>['fnState']>,
+    readonly trigger: () => void,
+    readonly forceTrigger: () => void,
+    readonly unsubscribe: () => void,
+}
+
+export function useSharedSubscription <T, S extends string = string>(key: S, subscriber: Subscriber<T>, scopeName?: Prefix): SharedSubscriptionStateReturn<T>;
+export function useSharedSubscription <T>(sharedSubscriptionCreated: SharedSubscriptionCreated<T>): SharedSubscriptionStateReturn<T>;
+export function useSharedSubscription <T, S extends string = string>(
+    key: S|SharedSubscriptionCreated<T>,
+    subscriber?: Subscriber<T>,
+    scopeName?: Prefix
+): SharedSubscriptionStateReturn<T> {
+
+    let keyStr: string;
+    let subscriberVal!: Subscriber<T>;
+    let scope: Prefix | undefined = scopeName;
+
+    if (typeof key !== "string") {
+        const { key: key2, subscriber: sub, prefix: prefix2 } = key;
+        keyStr = key2;
+        subscriberVal = sub;
+        scope = prefix2;
+    } else {
+        keyStr = ensureNonEmptyString(key);
+        subscriberVal = subscriber as Subscriber<T>;
+    }
+    const {prefix} = useShared(scope);
+
+    sharedSubscriptionsData.init(keyStr, prefix);
 
     const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedSubscriptionsState<T>['fnState']>>>[0]>(
         () =>
             (listener) => {
-                sharedSubscriptionsData.init(key, prefix);
-                sharedSubscriptionsData.addListener(key, prefix, listener);
+                sharedSubscriptionsData.init(keyStr, prefix);
+                sharedSubscriptionsData.addListener(keyStr, prefix, listener);
 
                 return () => {
-                    sharedSubscriptionsData.removeListener(key, prefix, listener);
+                    sharedSubscriptionsData.removeListener(keyStr, prefix, listener);
                 }
             },
         []
@@ -109,7 +147,7 @@ export const useSharedSubscription = <T, S extends string = string>(key: S, subs
     const externalStoreSnapshotGetter = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedSubscriptionsState<T>['fnState']>>>[1]>(
         () =>
             () =>
-                sharedSubscriptionsData.get(key, prefix)!.fnState as NonNullable<SharedSubscriptionsState<T>['fnState']>,
+                sharedSubscriptionsData.get(keyStr, prefix)!.fnState as NonNullable<SharedSubscriptionsState<T>['fnState']>,
         []
     );
 
@@ -117,27 +155,27 @@ export const useSharedSubscription = <T, S extends string = string>(key: S, subs
     const state = useSyncExternalStore<NonNullable<SharedSubscriptionsState<T>['fnState']>>(externalStoreSubscriber, externalStoreSnapshotGetter);
 
     const set = (value: T) => {
-        const entry = sharedSubscriptionsData.get(key, prefix)!;
+        const entry = sharedSubscriptionsData.get(keyStr, prefix)!;
         entry.fnState = { ...entry.fnState, data: value };
         entry.listeners.forEach(l => l());
     }
 
     const onError = (error: unknown) => {
-        const entry = sharedSubscriptionsData.get(key, prefix)!;
+        const entry = sharedSubscriptionsData.get(keyStr, prefix)!;
         entry.fnState = { ...entry.fnState, isLoading: false, data: undefined, error };
         entry.listeners.forEach(l => l());
     }
 
     const onComplete = () => {
-        const entry = sharedSubscriptionsData.get(key, prefix)!;
+        const entry = sharedSubscriptionsData.get(keyStr, prefix)!;
         entry.fnState = { ...entry.fnState, isLoading: false };
         entry.listeners.forEach(l => l());
     }
 
     const trigger = async (force: boolean) => {
-        const entry = sharedSubscriptionsData.get(key, prefix)!;
+        const entry = sharedSubscriptionsData.get(keyStr, prefix)!;
         if (force) {
-            await sharedSubscriptionsData.unsubscribe(key, prefix);
+            await sharedSubscriptionsData.unsubscribe(keyStr, prefix);
             entry.fnState = { ...entry.fnState, isLoading: false, data: undefined, error: undefined, subscribed: false };
         }
         if (entry.fnState.subscribed) return entry.fnState;
@@ -145,7 +183,7 @@ export const useSharedSubscription = <T, S extends string = string>(key: S, subs
         entry.fnState = { ...entry.fnState, isLoading: true, error: undefined };
         entry.listeners.forEach(l => l());
         try {
-            entry.unsubscribe = await subscriber(set, onError, onComplete);
+            entry.unsubscribe = await subscriberVal(set, onError, onComplete);
             entry.fnState.subscribed = true;
         } catch (error) {
             entry.fnState = { ...entry.fnState, isLoading: false, error };
@@ -153,7 +191,7 @@ export const useSharedSubscription = <T, S extends string = string>(key: S, subs
         entry.listeners.forEach(l => l());
     };
 
-    sharedSubscriptionsData.useEffect(key, prefix);
+    sharedSubscriptionsData.useEffect(keyStr, prefix);
 
     // noinspection JSUnusedGlobalSymbols
     return {
@@ -165,7 +203,7 @@ export const useSharedSubscription = <T, S extends string = string>(key: S, subs
             void trigger(true);
         },
         unsubscribe: () => {
-            void sharedSubscriptionsData.unsubscribe(key, prefix);
+            void sharedSubscriptionsData.unsubscribe(keyStr, prefix);
         }
     } as const;
-};
+}

@@ -1,4 +1,3 @@
-import type {NonEmptyString} from "../types";
 import {isDevMode} from "../config";
 
 export const log = (...args: any[]) => {
@@ -10,7 +9,11 @@ export const log = (...args: any[]) => {
     )
 }
 
-export const ensureNonEmptyString = <T extends string>(value: T): NonEmptyString<T> => {
+export const ensureNonEmptyString = <X extends string>(value: X): X => {
     if (!value) throw new Error("Value is empty");
-    return value as NonEmptyString<T>
+    return value
 };
+
+export const random = () => {
+    return Math.random().toString(36).substring(2, 15);
+}
