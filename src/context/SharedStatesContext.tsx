@@ -1,20 +1,21 @@
 import {createContext, type PropsWithChildren, useContext, useMemo} from 'react';
-import type {NonEmptyString} from "../types";
+import type {Prefix} from "../types";
+import {random} from "../lib/utils";
 
 export interface SharedStatesType {
     scopeName: string
 }
 
-const SharedStatesContext = createContext<SharedStatesType | undefined>(undefined);
+export const SharedStatesContext = createContext<SharedStatesType | undefined>(undefined);
 
-interface SharedStatesProviderProps<T extends string = string> extends PropsWithChildren {
-    scopeName?: '__global' extends NonEmptyString<T> ? never : NonEmptyString<T>;
+interface SharedStatesProviderProps extends PropsWithChildren {
+    scopeName?: Prefix;
 }
 
-export const SharedStatesProvider = <T extends string = string>({ children, scopeName }: SharedStatesProviderProps<T>) => {
+export const SharedStatesProvider = ({ children, scopeName }: SharedStatesProviderProps) => {
     if (scopeName && scopeName.includes("//")) throw new Error("scopeName cannot contain '//'");
 
-    if (!scopeName) scopeName = useMemo(() => Math.random().toString(36).substring(2, 15) as NonNullable<SharedStatesProviderProps<T>['scopeName']>, []);
+    if (!scopeName) scopeName = useMemo(() => random() as NonNullable<SharedStatesProviderProps['scopeName']>, []);
 
     return (
         <SharedStatesContext.Provider value={{scopeName}}>

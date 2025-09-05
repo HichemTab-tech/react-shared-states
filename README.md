@@ -48,7 +48,6 @@ function B(){
 }
 
 function App() {
-  
   return (
     <>
       <A/>
@@ -69,7 +68,6 @@ function Scoped(){
 }
 
 function App() {
-
   return (
     <>
       <A/>
@@ -77,6 +75,33 @@ function App() {
       <SharedStatesProvider>
         <Scoped/>
       </SharedStatesProvider>
+    </>
+  )
+}
+```
+
+---
+
+> **Tip:** For large apps, you can also use `createSharedState(initialValue, scopeName?)` to create and export reusable shared states. If you specify a `scopeName`, the state will always be found in that scope; otherwise, it defaults to global. This helps avoid key collisions and ensures type safety.
+
+```tsx
+import { useSharedState } from 'react-shared-states';
+export const sharedCounter = createSharedState(0);
+
+function A(){
+  const [count, setCount] = useSharedState(sharedCounter);
+  return <button onClick={()=>setCount(c=>c+1)}>A {count}</button>;
+}
+function B(){
+  const [count] = useSharedState(sharedCounter);
+  return <span>B sees {count}</span>;
+}
+
+function App() {
+  return (
+    <>
+      <A/>
+      <B/>
     </>
   )
 }
@@ -173,19 +198,22 @@ export default function App(){
 
 
 ## 🧠 Core Concepts
-| Concept              | Summary                                                                                                                         |
-|----------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| Global by default    | No provider necessary. Same key => shared state.                                                                                |
-| Scoping              | Wrap with `SharedStatesProvider` to isolate. Nearest provider wins.                                                             |
-| Named scopes         | `scopeName` prop lets distant providers sync (same name ⇒ same bucket). Unnamed providers auto‑generate a random isolated name. |
-| Manual override      | Third param in `useSharedState` / `useSharedFunction` / `useSharedSubscription` enforces a specific scope ignoring tree search. |
-| Shared functions     | Encapsulate async logic: single flight + cached result + `error` + `isLoading` + opt‑in refresh.                                |
-| Shared subscriptions | Real-time data streams: automatic cleanup + shared connections + `error` + `isLoading` + subscription state.                    |
-| Static APIs          | Access state/functions/subscriptions outside components (`sharedStatesApi`, `sharedFunctionsApi`, `sharedSubscriptionsApi`).    |
+| Concept                | Summary                                                                                                                         |
+|------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| Global by default      | No provider necessary. Same key => shared state.                                                                                |
+| Scoping                | Wrap with `SharedStatesProvider` to isolate. Nearest provider wins.                                                             |
+| Named scopes           | `scopeName` prop lets distant providers sync (same name ⇒ same bucket). Unnamed providers auto‑generate a random isolated name. |
+| Manual override        | Third param in `useSharedState` / `useSharedFunction` / `useSharedSubscription` enforces a specific scope ignoring tree search. |
+| Shared functions       | Encapsulate async logic: single flight + cached result + `error` + `isLoading` + opt‑in refresh.                                |
+| Shared subscriptions   | Real-time data streams: automatic cleanup + shared connections + `error` + `isLoading` + subscription state.                    |
+| Static APIs            | Access state/functions/subscriptions outside components (`sharedStatesApi`, `sharedFunctionsApi`, `sharedSubscriptionsApi`).    |
+| Static/shared creation | Use `createSharedState`, `createSharedFunction`, `createSharedSubscription` to export reusable, type-safe shared resources.     |
 
 
 ## 🏗️ Sharing State (`useSharedState`)
-Signature: `const [value, setValue] = useSharedState(key, initialValue, scopeName?);`
+Signature: 
+- `const [value, setValue] = useSharedState(key, initialValue, scopeName?)`
+- `const [value, setValue] = useSharedState(sharedStateCreated)`
 
 Behavior:
 * First hook call (per key + scope) seeds with `initialValue`.
@@ -194,35 +222,44 @@ Behavior:
 * React batching + equality check: listeners fire only when the value reference actually changes.
 
 ### Examples
-1. Global theme
+1. Global theme (recommended for large apps)
     ```tsx
-    const [theme, setTheme] = useSharedState('theme', 'light');
+    // themeState.ts
+    export const themeState = createSharedState('light');
+    // In components
+    const [theme, setTheme] = useSharedState(themeState);
     ```
 2. Isolated wizard progress
     ```tsx
+    const wizardProgress = createSharedState(0);
     <SharedStatesProvider>
       <Wizard/>
     </SharedStatesProvider>
+    // In Wizard
+    const [step, setStep] = useSharedState(wizardProgress);
     ```
 3. Forcing cross‑portal sync
     ```tsx
+    const navState = createSharedState('closed', 'nav');
     <SharedStatesProvider scopeName="nav" children={<PrimaryNav/>} />
     <Portal>
       <SharedStatesProvider scopeName="nav" children={<MobileNav/>} />
     </Portal>
+    // In both navs
+    const [navOpen, setNavOpen] = useSharedState(navState);
     ```
 4. Overriding nearest provider
     ```tsx
     // Even if inside a provider, this explicitly binds to global
-    const [flag, setFlag] = useSharedState('feature-x-enabled', false, '_global');
+    const globalFlag = createSharedState(false, '_global');
+    const [flag, setFlag] = useSharedState(globalFlag);
     ```
 
 
 ## ⚡ Shared Async Functions (`useSharedFunction`)
 Signature:
-```ts
-const { state, trigger, forceTrigger, clear } = useSharedFunction(key, asyncFn, scopeName?);
-```
+- `const { state, trigger, forceTrigger, clear } = useSharedFunction(key, asyncFn, scopeName?)`
+- `const { state, trigger, forceTrigger, clear } = useSharedFunction(sharedFunctionCreated)`
 `state` shape: `{ results?: T; isLoading: boolean; error?: unknown }`
 
 Semantics:
@@ -233,12 +270,12 @@ Semantics:
 
 ### Pattern: lazy load on first render
 ```tsx
+// profileFunction.ts
+export const profileFunction = createSharedFunction((id: string) => fetch(`/api/p/${id}`).then(r=>r.json()));
+
 function Profile({id}:{id:string}){
-  const { state, trigger } = useSharedFunction(`profile-${id}`, () => fetch(`/api/p/${id}`).then(r=>r.json()));
-  
-  if(!state.results && !state.isLoading) trigger();
-  if(state.isLoading) return <p>Loading...</p>;
-  return <pre>{JSON.stringify(state.results,null,2)}</pre>
+  const { state, trigger } = useSharedFunction(profileFunction);
+  // ...same as before
 }
 ```
 
@@ -254,9 +291,8 @@ Perfect for Firebase listeners, WebSocket connections,
 Server-Sent Events, or any streaming data source that needs cleanup.
 
 Signature:
-```ts
-const { state, trigger, unsubscribe } = useSharedSubscription(key, subscriber, scopeName?);
-```
+- `const { state, trigger, unsubscribe } = useSharedSubscription(key, subscriber, scopeName?)`
+- `const { state, trigger, unsubscribe } = useSharedSubscription(sharedSubscriptionCreated)`
 
 `state` shape: `{ data?: T; isLoading: boolean; error?: unknown; subscribed: boolean }`
 
@@ -268,36 +304,19 @@ The `subscriber` function receives three callbacks:
 
 ### Pattern: Firebase Firestore real-time listener
 ```tsx
-import { useEffect } from 'react';
+// userSubscription.ts
 import { onSnapshot, doc } from 'firebase/firestore';
-import { useSharedSubscription } from 'react-shared-states';
-import { db } from './firebase-config'; // your Firebase config
+import { createSharedSubscription } from 'react-shared-states';
+import { db } from './firebase-config';
+
+export const userSubscription = createSharedSubscription(
+  async (set, onError, onCompletion) => {
+    // ...same as before
+  }
+);
 
 function UserProfile({ userId }: { userId: string }) {
-  const { state, trigger, unsubscribe } = useSharedSubscription(
-    `user-${userId}`,
-    async (set, onError, onCompletion) => {
-      const userRef = doc(db, 'users', userId);
-      
-      // Set up the real-time listener
-      const unsubscribe = onSnapshot(
-        userRef,
-        (snapshot) => {
-          if (snapshot.exists()) {
-            set({ id: snapshot.id, ...snapshot.data() });
-          } else {
-            set(null);
-          }
-        },
-        onError,
-        onCompletion
-      );
-      
-      // Return cleanup function
-      return unsubscribe;
-    }
-  );
-
+  const { state, trigger, unsubscribe } = useSharedSubscription(userSubscription);
   // Start listening when component mounts
   useEffect(() => {
     trigger();
@@ -395,6 +414,23 @@ Subscription semantics:
 
 
 ## 🛰️ Static APIs (outside React)
+## 🏛️ Static/Global Shared Resource Creation
+
+For large apps, you can create and export shared state, function, or subscription objects for type safety and to avoid key collisions. This pattern is similar to Zustand or Jotai stores:
+
+```ts
+import { createSharedState, createSharedFunction, createSharedSubscription, useSharedState, useSharedFunction, useSharedSubscription } from 'react-shared-states';
+
+// Create and export shared resources
+export const counterState = createSharedState(0);
+export const fetchUserFunction = createSharedFunction(() => fetch('/api/me').then(r => r.json()));
+export const chatSubscription = createSharedSubscription((set, onError, onCompletion) => {/* ... */});
+
+// Use anywhere in your app
+const [count, setCount] = useSharedState(counterState);
+const { state, trigger } = useSharedFunction(fetchUserFunction);
+const { state, trigger, unsubscribe } = useSharedSubscription(chatSubscription);
+```
 Useful for SSR hydration, event listeners, debugging, imperative workflows.
 
 ```ts
@@ -490,16 +526,25 @@ Currently no built-in Suspense wrappers; wrap `useSharedFunction` yourself if de
 ### `useSharedState(key, initialValue, scopeName?)`
 Returns `[value, setValue]`.
 
+### `useSharedState(sharedStateCreated)`
+Returns `[value, setValue]`.
+
 ### `useSharedFunction(key, fn, scopeName?)`
+Returns `{ state, trigger, forceTrigger, clear }`.
+
+### `useSharedFunction(sharedFunctionCreated)`
 Returns `{ state, trigger, forceTrigger, clear }`.
 
 ### `useSharedSubscription(key, subscriber, scopeName?)`
 Returns `{ state, trigger, unsubscribe }`.
 
+### `useSharedSubscription(sharedSubscriptionCreated)`
+Returns `{ state, trigger, unsubscribe }`.
+
 ### `<SharedStatesProvider scopeName?>`
 Wrap children; optional `scopeName` (string). If omitted a random unique one is generated.
 
-### Static
+### Static APIs
 `sharedStatesApi`, `sharedFunctionsApi`, `sharedSubscriptionsApi` (see earlier table).
 
 

@@ -16,8 +16,9 @@
   "module": "dist/main.esm.js",
   "types": "dist/index.d.ts",
   "scripts": {
+    "tsc": "tsc",
     "bump": "node scripts/bumper.js",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "test": "vitest",
     "preview": "vite preview",
     "dev:demo": "vite --config demo/vite.config.demo.ts",

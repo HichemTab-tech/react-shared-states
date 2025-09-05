@@ -1,4 +1,4 @@
-import type {AFunction, DataMapValue, Prefix} from "./types";
+import type {AFunction, DataMapValue, Prefix, SharedCreated} from "./types";
 import {useEffect} from "react";
 import {ensureNonEmptyString, log} from "./lib/utils";
 
@@ -150,13 +150,33 @@ export class SharedApi<T>{
     }
 
     /**
+     * resolve a shared created object to a value
+     * @param sharedCreated
+     */
+    resolve(sharedCreated: SharedCreated) {
+        const {key, prefix} = sharedCreated;
+        return this.get(key, prefix);
+    }
+
+    clear(key: string, scopeName: Prefix): void;
+    clear(sharedCreated: SharedCreated): void;
+    /**
      * clear a value from the shared data
      * @param key
      * @param scopeName
      */
-    clear(key: string, scopeName: Prefix) {
-        const prefix: Prefix = scopeName || "_global";
-        this.sharedData.clear(key, prefix);
+    clear(key: string|SharedCreated, scopeName?: Prefix) {
+        let keyStr!: string;
+        let prefixStr!: string;
+        if (typeof key === "string") {
+            keyStr = key;
+            prefixStr = scopeName || "_global";
+        }
+        else{
+            keyStr = key.key;
+            prefixStr = key.prefix;
+        }
+        this.sharedData.clear(keyStr, prefixStr);
     }
 
     /**

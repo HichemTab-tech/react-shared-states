@@ -8,4 +8,7 @@ export interface DataMapValue {
     listeners: AFunction[]
 }
 
-export type NonEmptyString<T extends string> = '' extends T ? never : T;
+export interface SharedCreated {
+    key: string,
+    prefix: string,
+}

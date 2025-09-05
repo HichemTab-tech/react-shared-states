@@ -10,6 +10,7 @@ import {
 import './FakeSharedEmitter';
 import {FakeSharedEmitter} from "./FakeSharedEmitter";
 import {useEffect, useState} from "react";
+import {createSharedState} from "react-shared-states";
 
 FakeSharedEmitter.intervalDuration = 3000;
 window.sharedSubscriptionsApi = sharedSubscriptionsApi;
@@ -18,8 +19,12 @@ window.sharedStatesApi = sharedStatesApi;
 
 sharedStatesApi.set("x", 55);
 
+const counterGlobal = createSharedState(0);
+
 const Comp1 = () => {
-    const [x, setX] = useSharedState('x', 0);
+    //const [x, setX] = useSharedState('x', 0);
+    //const [x, setX] = useSharedState(counterGlobal);
+    const [x, setX] = useSharedState("counterGlobal", "");
     const handle = (by = 1) => {
         setX(x+by)
     }
@@ -77,7 +82,8 @@ const Comp2 = () => {
 const App = () => {
 
     const [hide, setHide] = useState(false);
-    const [x, setX] = useSharedState('x', 0);
+    const [x, setX] = useSharedState(counterGlobal);
+    //const [x, setX] = useSharedState('x', 0);
     //const [x, setX] = useState(0);
     const handle = () => {
         setX(x+1)
