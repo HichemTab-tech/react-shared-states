@@ -10,7 +10,7 @@ import {
 import './FakeSharedEmitter';
 import {FakeSharedEmitter} from "./FakeSharedEmitter";
 import {useEffect, useState} from "react";
-import {createSharedState} from "../src/hooks/use-shared-state";
+import {createSharedState} from "react-shared-states";
 
 FakeSharedEmitter.intervalDuration = 3000;
 window.sharedSubscriptionsApi = sharedSubscriptionsApi;
