@@ -400,31 +400,40 @@ Useful for SSR hydration, event listeners, debugging, imperative workflows.
 ```ts
 import { sharedStatesApi, sharedFunctionsApi, sharedSubscriptionsApi } from 'react-shared-states';
 
-// Preload state
+// Preload state (global scope by default)
 sharedStatesApi.set('bootstrap-data', { user: {...} });
 
-// Read later
-const user = sharedStatesApi.get('bootstrap-data');
+// Preload state in a named scope
+sharedStatesApi.set('bootstrap-data', { user: {...} }, 'myScope');
 
-// Inspect all
-console.log(sharedStatesApi.getAll()); // Map with prefixed keys
+// Read later
+const user = sharedStatesApi.get('bootstrap-data'); // global
+const userScoped = sharedStatesApi.get('bootstrap-data', 'myScope');
+
+// Inspect all (returns nested object: { [scope]: { [key]: value } })
+console.log(sharedStatesApi.getAll());
+
+// Clear all keys in a scope
+sharedStatesApi.clearScope('myScope');
 
 // For shared functions
 const fnState = sharedFunctionsApi.get('profile-123');
+const fnStateScoped = sharedFunctionsApi.get('profile-123', 'myScope');
 
 // For shared subscriptions
 const subState = sharedSubscriptionsApi.get('live-chat');
+const subStateScoped = sharedSubscriptionsApi.get('live-chat', 'myScope');
 ```
 
 ## API summary:
 
-| API                      | Methods                                                                               |
-|--------------------------|---------------------------------------------------------------------------------------|
-| `sharedStatesApi`        | `get(key, scope?)`, `set(key,val,scope?)`, `has`, `clear`, `clearAll`, `getAll()`     |
-| `sharedFunctionsApi`     | `get(key, scope?)` (returns fn state), `set`, `has`, `clear`, `clearAll`, `getAll()`  |
-| `sharedSubscriptionsApi` | `get(key, scope?)` (returns sub state), `set`, `has`, `clear`, `clearAll`, `getAll()` |
+| API                      | Methods                                                                                                                                                   |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `sharedStatesApi`        | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll()`, `clearScope(scopeName?)`, `getAll()` |
+| `sharedFunctionsApi`     | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll()`, `clearScope(scopeName?)`, `getAll()` |
+| `sharedSubscriptionsApi` | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll()`, `clearScope(scopeName?)`, `getAll()` |
 
-`scope` defaults to `"_global"`. Internally keys are stored as `${scope}_${key}`.
+`scopeName` defaults to `"_global"`. Internally, keys are stored as `${scope}//${key}`. The `.getAll()` method returns a nested object: `{ [scope]: { [key]: value } }`.
 
 
 ## 🧩 Scoping Rules Deep Dive
