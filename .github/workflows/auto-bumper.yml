@@ -16,12 +16,43 @@ jobs:
     if: (contains( github.event.pull_request.labels.*.name, 'auto-bump') || (contains(github.event.comment.body, '@github-bot') && contains(github.event.comment.body, 'bump')))
     steps:
 
+      - name: React 👍 to triggering comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { eventName, repo, payload } = context;
+            const { owner, repo: repoName } = repo;
+            
+            const commentId = payload?.comment?.id;
+            if (!commentId) {
+              core.setFailed('No triggering comment found in payload.');
+              return;
+            }
+            
+            if (eventName === 'issue_comment') {
+              await github.rest.reactions.createForIssueComment({
+                owner,
+                repo: repoName,
+                comment_id: commentId,
+                content: '+1',
+              });
+            } else if (eventName === 'pull_request_review_comment') {
+              await github.rest.reactions.createForPullRequestReviewComment({
+                owner,
+                repo: repoName,
+                comment_id: commentId,
+                content: '+1',
+              });
+            } else {
+              core.setFailed(`Unsupported event: ${eventName}. Use issue_comment or pull_request_review_comment.`);
+            }
+
       - name: Add comment to PR
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./packages/surveyjs-builder/package.json', 'utf8'));
+            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
