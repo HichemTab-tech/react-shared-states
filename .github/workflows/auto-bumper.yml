@@ -64,7 +64,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `Okay BOSS, ⏳ Bumping version to ${pkg.version}...`
+              body: `Okay BOSS, ⏳ Bumping version from ${pkg.version}...`
             })
 
 
