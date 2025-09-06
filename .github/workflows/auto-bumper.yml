@@ -47,6 +47,13 @@ jobs:
               core.setFailed(`Unsupported event: ${eventName}. Use issue_comment or pull_request_review_comment.`);
             }
 
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Add comment to PR
         uses: actions/github-script@v7
         with:
@@ -59,13 +66,6 @@ jobs:
               repo: context.repo.repo,
               body: `Okay boss, ⏳ Bumping version to ${pkg.version}...`
             })
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
 
       - name: Setup Node & pnpm
