@@ -21,13 +21,23 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./packages/surveyjs-builder/package.json', 'utf8'));
-            github.rest.issues.createComment({
+            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+            // 1) Create the comment
+            const { data: comment } = await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `Okay boss, ⏳ Bumping version to ${pkg.version}...`
-            })
+            });
+      
+            // 2) React to that comment with a thumbs-up
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: comment.id,
+              content: '+1' // 👍
+            });
+
 
       - name: Checkout
         uses: actions/checkout@v4
