@@ -63,7 +63,8 @@ class SharedSubscriptionsData extends SharedData<SharedSubscriptionsState<unknow
                 entry.unsubscribe();
                 entry.unsubscribe = undefined;
             }
-            entry.fnState.subscribed = false;
+            entry.fnState = { ...entry.fnState, subscribed: false };
+            this.callListeners(key, prefix);
         }
     }
 }

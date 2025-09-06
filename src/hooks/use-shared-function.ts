@@ -143,8 +143,11 @@ export function useSharedFunction <T, Args extends unknown[], S extends string =
             void trigger(true, ...args);
         },
         clear: () => {
-            sharedFunctionsData.clear(keyStr, prefix);
-            sharedFunctionsData.init(keyStr, prefix);
+            const entry = sharedFunctionsData.get(keyStr, prefix);
+            if (entry) {
+                entry.fnState = sharedFunctionsData.defaultValue().fnState;
+                sharedFunctionsData.callListeners(keyStr, prefix);
+            }
         }
     } as const;
 }
