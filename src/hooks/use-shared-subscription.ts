@@ -71,14 +71,10 @@ class SharedSubscriptionsData extends SharedData<SharedSubscriptionsState<unknow
 
 export class SharedSubscriptionsApi extends SharedApi<SharedSubscriptionsState<unknown>>{
     get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        return sharedSubscriptionsData.get(key, prefix)?.fnState as T;
+        return super.get(key, scopeName)?.fnState as T;
     }
     set<T, S extends string = string>(key: S, fnState: SharedSubscriptionsState<T>, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        sharedSubscriptionsData.setValue(key, prefix, fnState);
+        super.set(key, fnState, scopeName);
     }
 }
 

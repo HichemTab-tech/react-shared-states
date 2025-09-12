@@ -34,14 +34,10 @@ class SharedFunctionsData extends SharedData<SharedFunctionsState<unknown>> {
 
 export class SharedFunctionsApi extends SharedApi<SharedFunctionsState<unknown>>{
     get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        return sharedFunctionsData.get(key, prefix)?.fnState as T;
+        return super.get(key, scopeName)?.fnState as T;
     }
     set<T, S extends string = string>(key: S, fnState: SharedFunctionsState<T>, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        sharedFunctionsData.setValue(key, prefix, fnState);
+        super.set(key, fnState, scopeName);
     }
 }
 

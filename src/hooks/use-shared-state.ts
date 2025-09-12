@@ -28,14 +28,10 @@ export class SharedStatesApi extends SharedApi<{
     value: unknown
 }>{
     get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        return sharedStatesData.get(key, prefix)?.value as T;
+        return super.get(key, scopeName)?.value as T;
     }
     set<T, S extends string = string>(key: S, value: T, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        sharedStatesData.setValue(key, prefix, {value});
+        super.set(key, {value}, scopeName);
     }
 }
 
