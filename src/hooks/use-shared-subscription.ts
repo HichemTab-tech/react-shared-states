@@ -2,7 +2,7 @@ import type {PotentialPromise, Prefix, SharedCreated} from "../types";
 import {useEffect, useMemo, useSyncExternalStore} from "react";
 import {SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
-import {ensureNonEmptyString, log, random} from "../lib/utils";
+import {ensureNonEmptyString, log} from "../lib/utils";
 
 type Unsubscribe = () => void;
 export namespace SubscriberEvents{
@@ -35,8 +35,8 @@ class SharedSubscriptionsData extends SharedData<SharedSubscriptionsState<unknow
         };
     }
 
-    init(key: string, prefix: Prefix) {
-        super.init(key, prefix, this.defaultValue());
+    initValue(key: string, prefix: Prefix, isStatic: boolean = false) {
+        super.init(key, prefix, this.defaultValue(), isStatic);
     }
 
     setValue<T>(key: string, prefix: Prefix, data: SharedSubscriptionsState<T>) {
@@ -70,10 +70,21 @@ class SharedSubscriptionsData extends SharedData<SharedSubscriptionsState<unknow
 }
 
 export class SharedSubscriptionsApi extends SharedApi<SharedSubscriptionsState<unknown>>{
-    get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
+    get<T, S extends string = string>(key: S, scopeName?: Prefix): T;
+    get<T>(sharedSubscriptionCreated: SharedSubscriptionCreated<T>): T;
+    get<T, S extends string = string>(key: S | SharedSubscriptionCreated<T>, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            return super.get(key)?.fnState as T;
+        }
         return super.get(key, scopeName)?.fnState as T;
     }
-    set<T, S extends string = string>(key: S, fnState: SharedSubscriptionsState<T>, scopeName: Prefix = "_global") {
+    set<T, S extends string = string>(key: S, fnState: SharedSubscriptionsState<T>, scopeName?: Prefix): void;
+    set<T>(sharedSubscriptionCreated: SharedSubscriptionCreated<T>, fnState: SharedSubscriptionsState<T>): void;
+    set<T, S extends string = string>(key: S | SharedSubscriptionCreated<T>, fnState: SharedSubscriptionsState<T>, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            super.set(key, fnState);
+            return;
+        }
         super.set(key, fnState, scopeName);
     }
 }
@@ -87,13 +98,7 @@ interface SharedSubscriptionCreated<T> extends SharedCreated{
 }
 
 export const createSharedSubscription = <T, Args extends unknown[]>(subscriber: Subscriber<T>, scopeName?: Prefix): SharedSubscriptionCreated<T> => {
-    const prefix: Prefix = scopeName ?? scopeName ?? "_global";
-
-    return {
-        key: random(),
-        prefix,
-        subscriber,
-    }
+    return sharedSubscriptionsData.createStatic<SharedSubscriptionCreated<T>>({subscriber}, scopeName);
 }
 
 export type SharedSubscriptionStateReturn<T> = {
@@ -126,12 +131,12 @@ export function useSharedSubscription <T, S extends string = string>(
     }
     const {prefix} = useShared(scope);
 
-    sharedSubscriptionsData.init(keyStr, prefix);
+    sharedSubscriptionsData.initValue(keyStr, prefix);
 
     const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedSubscriptionsState<T>['fnState']>>>[0]>(
         () =>
             (listener) => {
-                sharedSubscriptionsData.init(keyStr, prefix);
+                sharedSubscriptionsData.initValue(keyStr, prefix);
                 sharedSubscriptionsData.addListener(keyStr, prefix, listener);
 
                 return () => {

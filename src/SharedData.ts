@@ -1,7 +1,8 @@
 import type {AFunction, DataMapValue, Prefix, SharedCreated} from "./types";
 import {useEffect} from "react";
-import {ensureNonEmptyString, log} from "./lib/utils";
+import {ensureNonEmptyString, log, random} from "./lib/utils";
 
+export const staticStores: SharedCreated[] = [];
 
 type SharedDataType<T> = DataMapValue & T;
 
@@ -34,29 +35,58 @@ export abstract class SharedData<T> {
         }
     }
 
-    init(key: string, prefix: Prefix, data: T) {
+    init(key: string, prefix: Prefix, data: T, isStatic = false) {
         if (!this.data.has(SharedData.prefix(key, prefix))) {
             this.data.set(SharedData.prefix(key, prefix), {
                 ...data,
+                isStatic,
                 listeners: [],
             } as SharedDataType<T>);
         }
     }
 
-    clearAll(withoutListeners = false) {
-        if (!withoutListeners) {
-            this.data.forEach((value) => {
-                value.listeners.forEach((listener) => listener());
-            });
+    createStatic<X extends SharedCreated>(rest: Omit<X, 'key' | 'prefix'>, scopeName?: Prefix) {
+        const prefix: Prefix = scopeName ?? scopeName ?? "_global";
+
+        const staticStoreId = {
+            key: random(),
+            prefix,
+            ...rest
         }
-        this.data.clear();
+
+        staticStores.push(staticStoreId);
+
+        this.initStatic(staticStoreId);
+
+        return staticStoreId;
     }
 
-    clear(key: string, prefix: Prefix, withoutListeners = false) {
+    initStatic(sharedCreated: SharedCreated) {
+        const {key, prefix} = sharedCreated;
+        this.init(key, prefix, this.defaultValue(), true);
+    }
+
+    clearAll(withoutListeners = false, withStatic = false) {
+        this.data.forEach((_, mapKey) => {
+            const [prefix, key] = SharedData.extractPrefix(mapKey);
+            this.clear(key, prefix, withoutListeners, withStatic);
+        });
+    }
+
+    clear(key: string, prefix: Prefix, withoutListeners = false, withStatic = false) {
         if (!withoutListeners) {
             this.callListeners(key, prefix);
         }
+        const data = this.data.get(SharedData.prefix(key, prefix));
+        if (!data) return;
+        const backedData = {...data};
         this.data.delete(SharedData.prefix(key, prefix));
+        if (backedData.isStatic && !withStatic) {
+            const store = staticStores.find((s) => s.key === key && s.prefix === prefix);
+            if (store) {
+                this.initStatic(store);
+            }
+        }
     }
 
     get(key: string, prefix: Prefix) {
@@ -102,15 +132,15 @@ export abstract class SharedData<T> {
 
 // noinspection JSUnusedGlobalSymbols
 export class SharedApi<T>{
-    constructor(private sharedData: SharedData<T>) {}
+    constructor(protected sharedData: SharedData<T>) {}
 
     /**
      * get a value from the shared data
      * @param key
      * @param scopeName
      */
-    get<S extends string = string>(key: S, scopeName: Prefix): void;
-    get<S extends string = string>(sharedCreated: SharedCreated): void;
+    get<S extends string = string>(key: S, scopeName: Prefix): T;
+    get<S extends string = string>(sharedCreated: SharedCreated): T;
     get<S extends string = string>(key: S | SharedCreated, scopeName?: Prefix) {
         let keyStr: string;
         let scope: Prefix | undefined = scopeName;

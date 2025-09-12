@@ -2,7 +2,7 @@ import type {AFunction, Prefix, SharedCreated} from "../types";
 import {useMemo, useSyncExternalStore} from "react";
 import {SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
-import {ensureNonEmptyString, random} from "../lib/utils";
+import {ensureNonEmptyString} from "../lib/utils";
 
 type SharedFunctionsState<T> = {
     fnState: {
@@ -23,8 +23,8 @@ class SharedFunctionsData extends SharedData<SharedFunctionsState<unknown>> {
         };
     }
 
-    init(key: string, prefix: Prefix) {
-        super.init(key, prefix, this.defaultValue());
+    initValue(key: string, prefix: Prefix, isStatic: boolean = false) {
+        super.init(key, prefix, this.defaultValue(), isStatic);
     }
 
     setValue<T>(key: string, prefix: Prefix, data: SharedFunctionsState<T>) {
@@ -33,10 +33,21 @@ class SharedFunctionsData extends SharedData<SharedFunctionsState<unknown>> {
 }
 
 export class SharedFunctionsApi extends SharedApi<SharedFunctionsState<unknown>>{
-    get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
+    get<T, S extends string = string>(key: S, scopeName?: Prefix): T;
+    get<T, Args extends unknown[]>(sharedFunctionCreated: SharedFunctionCreated<T, Args>): T;
+    get<T, Args extends unknown[], S extends string = string>(key: S | SharedFunctionCreated<T, Args>, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            return super.get(key)?.fnState as T;
+        }
         return super.get(key, scopeName)?.fnState as T;
     }
-    set<T, S extends string = string>(key: S, fnState: SharedFunctionsState<T>, scopeName: Prefix = "_global") {
+    set<T, S extends string = string>(key: S, fnState: SharedFunctionsState<T>, scopeName?: Prefix): void;
+    set<T, Args extends unknown[]>(sharedFunctionCreated: SharedFunctionCreated<T, Args>, fnState: SharedFunctionsState<T>): void;
+    set<T, Args extends unknown[], S extends string = string>(key: S | SharedFunctionCreated<T, Args>, fnState: SharedFunctionsState<T>, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            super.set(key, fnState);
+            return;
+        }
         super.set(key, fnState, scopeName);
     }
 }
@@ -50,13 +61,7 @@ interface SharedFunctionCreated<T, Args extends unknown[]> extends SharedCreated
 }
 
 export const createSharedFunction = <T, Args extends unknown[]>(fn: AFunction<T, Args>, scopeName?: Prefix): SharedFunctionCreated<T, Args> => {
-    const prefix: Prefix = scopeName ?? scopeName ?? "_global";
-
-    return {
-        key: random(),
-        prefix,
-        fn,
-    }
+    return sharedFunctionsData.createStatic<SharedFunctionCreated<T, Args>>({fn}, scopeName);
 }
 
 export type SharedFunctionStateReturn<T, Args extends unknown[]> = {
@@ -89,12 +94,12 @@ export function useSharedFunction <T, Args extends unknown[], S extends string =
     }
     const {prefix} = useShared(scope);
 
-    sharedFunctionsData.init(keyStr, prefix);
+    sharedFunctionsData.initValue(keyStr, prefix);
 
     const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>>[0]>(
         () =>
             (listener) => {
-                sharedFunctionsData.init(keyStr, prefix);
+                sharedFunctionsData.initValue(keyStr, prefix);
                 sharedFunctionsData.addListener(keyStr, prefix, listener);
 
                 return () => {

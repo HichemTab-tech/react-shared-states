@@ -5,6 +5,7 @@ import {
     createSharedFunction,
     createSharedState, createSharedSubscription,
     SharedStatesProvider,
+    sharedStatesApi,
     useSharedFunction,
     useSharedState,
     useSharedSubscription
@@ -138,6 +139,29 @@ describe('useSharedState', () => {
         });
 
         expect(screen.getByTestId('value1').textContent).toBe('15');
+    });
+
+    it('should allow direct api manipulation with createSharedState objects', () => {
+        const sharedCounter = createSharedState(100);
+
+        // Get initial value
+        expect(sharedStatesApi.get(sharedCounter)).toBe(100);
+
+        // Set a new value
+        act(() => {
+            sharedStatesApi.set(sharedCounter, 200);
+        });
+
+        // Get updated value
+        expect(sharedStatesApi.get(sharedCounter)).toBe(200);
+
+        // Clear the value
+        act(() => {
+            sharedStatesApi.clear(sharedCounter);
+        });
+
+        // Get value after clear (should be initial value because createSharedState re-initializes it)
+        expect(sharedStatesApi.get(sharedCounter)).toBe(100);
     });
 });
 

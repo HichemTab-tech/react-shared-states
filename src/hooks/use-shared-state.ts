@@ -1,8 +1,8 @@
 import {useMemo, useSyncExternalStore} from "react";
-import type {AFunction, Prefix, SharedCreated} from "../types";
+import type {Prefix, SharedCreated} from "../types";
 import {SharedApi, SharedData} from "../SharedData";
 import useShared from "./use-shared";
-import {ensureNonEmptyString, random} from "../lib/utils";
+import {ensureNonEmptyString} from "../lib/utils";
 
 class SharedStatesData extends SharedData<{
     value: unknown
@@ -11,26 +11,34 @@ class SharedStatesData extends SharedData<{
         return {value: undefined};
     }
 
-    init(key: string, prefix: Prefix, value: unknown) {
-        super.init(key, prefix, {value});
+    initValue(key: string, prefix: Prefix, value: unknown, isStatic: boolean = false) {
+        super.init(key, prefix, {value}, isStatic);
     }
 
-    setValue(key: string, prefix: Prefix, value: unknown) {
-        super.setValue(key, prefix, {value});
-    }
-
-    removeListener(key: string, prefix: Prefix, listener: AFunction) {
-        super.removeListener(key, prefix, listener);
+    initStatic(sharedStateCreated: SharedStateCreated<any>) {
+        const {key, prefix, initialValue} = sharedStateCreated;
+        this.initValue(key, prefix, initialValue, true);
     }
 }
 
 export class SharedStatesApi extends SharedApi<{
     value: unknown
 }>{
-    get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
+    get<T, S extends string = string>(key: S, scopeName?: Prefix): T;
+    get<T>(sharedStateCreated: SharedStateCreated<T>): T;
+    get<T, S extends string = string>(key: S | SharedStateCreated<T>, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            return super.get(key)?.value as T;
+        }
         return super.get(key, scopeName)?.value as T;
     }
-    set<T, S extends string = string>(key: S, value: T, scopeName: Prefix = "_global") {
+    set<T, S extends string = string>(key: S, value: T, scopeName?: Prefix): void;
+    set<T>(sharedStateCreated: SharedStateCreated<T>, value: T): void;
+    set<T, S extends string = string>(key: S | SharedStateCreated<T>, value: T, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            super.set(key, {value});
+            return;
+        }
         super.set(key, {value}, scopeName);
     }
 }
@@ -44,13 +52,7 @@ export interface SharedStateCreated<T> extends SharedCreated{
 }
 
 export const createSharedState = <T>(initialValue: T, scopeName?: Prefix): SharedStateCreated<T> => {
-    const prefix: Prefix = scopeName ?? scopeName ?? "_global";
-
-    return {
-        key: random(),
-        prefix,
-        initialValue,
-    }
+    return sharedStatesData.createStatic<SharedStateCreated<T>>({initialValue}, scopeName);
 }
 
 export function useSharedState<T, S extends string>(key: S, initialValue: T, scopeName?: Prefix): readonly [T, (v: T | ((prev: T) => T)) => void];
@@ -76,10 +78,10 @@ export function useSharedState<T, S extends string>(
 
     const {prefix} = useShared(scope);
 
-    sharedStatesData.init(keyStr, prefix, initVal);
+    sharedStatesData.initValue(keyStr, prefix, initVal);
 
     const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore>[0]>(() => (listener) => {
-        sharedStatesData.init(keyStr, prefix, initialValue);
+        sharedStatesData.initValue(keyStr, prefix, initialValue);
         sharedStatesData.addListener(keyStr, prefix, listener);
 
         return () => {
@@ -94,7 +96,7 @@ export function useSharedState<T, S extends string>(
     const setData = (newValueOrCallbackToNewValue: T|((prev: T) => T)) => {
         const newValue = (typeof newValueOrCallbackToNewValue === "function") ? (newValueOrCallbackToNewValue as (prev: T) => T)(sharedStatesData.get(keyStr, prefix)?.value as T) : newValueOrCallbackToNewValue
         if (newValue !== dataValue) {
-            sharedStatesData.setValue(keyStr, prefix, newValue);
+            sharedStatesData.setValue(keyStr, prefix, {value:newValue});
             sharedStatesData.callListeners(keyStr, prefix);
         }
     }
