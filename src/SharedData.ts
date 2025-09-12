@@ -109,10 +109,21 @@ export class SharedApi<T>{
      * @param key
      * @param scopeName
      */
-    get<S extends string = string>(key: S, scopeName: Prefix) {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        return this.sharedData.get(key, prefix) as T;
+    get<S extends string = string>(key: S, scopeName: Prefix): void;
+    get<S extends string = string>(sharedCreated: SharedCreated): void;
+    get<S extends string = string>(key: S | SharedCreated, scopeName?: Prefix) {
+        let keyStr: string;
+        let scope: Prefix | undefined = scopeName;
+
+        if (typeof key !== "string") {
+            const { key: key2, prefix: prefix2 } = key;
+            keyStr = key2;
+            scope = prefix2;
+        } else {
+            keyStr = ensureNonEmptyString(key);
+        }
+        const prefix: Prefix = scope || "_global";
+        return this.sharedData.get(keyStr, prefix) as T;
     }
 
     /**
@@ -121,10 +132,21 @@ export class SharedApi<T>{
      * @param value
      * @param scopeName
      */
-    set<S extends string = string>(key: S, value: T, scopeName: Prefix) {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        this.sharedData.setValue(key, prefix, value);
+    set<S extends string = string>(key: S, value: T, scopeName: Prefix): void;
+    set<S extends string = string>(sharedCreated: SharedCreated, value: T): void;
+    set<S extends string = string>(key: S | SharedCreated, value: T, scopeName?: Prefix) {
+        let keyStr: string;
+        let scope: Prefix | undefined = scopeName;
+
+        if (typeof key !== "string") {
+            const { key: key2, prefix: prefix2 } = key;
+            keyStr = key2;
+            scope = prefix2;
+        } else {
+            keyStr = ensureNonEmptyString(key);
+        }
+        const prefix: Prefix = scope || "_global";
+        this.sharedData.setValue(keyStr, prefix, value);
     }
 
     /**
@@ -158,13 +180,13 @@ export class SharedApi<T>{
         return this.get(key, prefix);
     }
 
-    clear(key: string, scopeName: Prefix): void;
-    clear(sharedCreated: SharedCreated): void;
     /**
      * clear a value from the shared data
      * @param key
      * @param scopeName
      */
+    clear(key: string, scopeName: Prefix): void;
+    clear(sharedCreated: SharedCreated): void;
     clear(key: string|SharedCreated, scopeName?: Prefix) {
         let keyStr!: string;
         let prefixStr!: string;
