@@ -1,4 +1,3 @@
-
 # React Shared States
 
 **_Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping._**
@@ -198,16 +197,16 @@ export default function App(){
 
 
 ## 🧠 Core Concepts
-| Concept                | Summary                                                                                                                         |
-|------------------------|---------------------------------------------------------------------------------------------------------------------------------|
-| Global by default      | No provider necessary. Same key => shared state.                                                                                |
-| Scoping                | Wrap with `SharedStatesProvider` to isolate. Nearest provider wins.                                                             |
-| Named scopes           | `scopeName` prop lets distant providers sync (same name ⇒ same bucket). Unnamed providers auto‑generate a random isolated name. |
-| Manual override        | Third param in `useSharedState` / `useSharedFunction` / `useSharedSubscription` enforces a specific scope ignoring tree search. |
-| Shared functions       | Encapsulate async logic: single flight + cached result + `error` + `isLoading` + opt‑in refresh.                                |
-| Shared subscriptions   | Real-time data streams: automatic cleanup + shared connections + `error` + `isLoading` + subscription state.                    |
-| Static APIs            | Access state/functions/subscriptions outside components (`sharedStatesApi`, `sharedFunctionsApi`, `sharedSubscriptionsApi`).    |
-| Static/shared creation | Use `createSharedState`, `createSharedFunction`, `createSharedSubscription` to export reusable, type-safe shared resources that persist across `clearAll()` calls.     |
+| Concept                | Summary                                                                                                                                                            |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Global by default      | No provider necessary. Same key => shared state.                                                                                                                   |
+| Scoping                | Wrap with `SharedStatesProvider` to isolate. Nearest provider wins.                                                                                                |
+| Named scopes           | `scopeName` prop lets distant providers sync (same name ⇒ same bucket). Unnamed providers auto‑generate a random isolated name.                                    |
+| Manual override        | Third param in `useSharedState` / `useSharedFunction` / `useSharedSubscription` enforces a specific scope ignoring tree search.                                    |
+| Shared functions       | Encapsulate async logic: single flight + cached result + `error` + `isLoading` + opt‑in refresh.                                                                   |
+| Shared subscriptions   | Real-time data streams: automatic cleanup + shared connections + `error` + `isLoading` + subscription state.                                                       |
+| Static APIs            | Access state/functions/subscriptions outside components (`sharedStatesApi`, `sharedFunctionsApi`, `sharedSubscriptionsApi`).                                       |
+| Static/shared creation | Use `createSharedState`, `createSharedFunction`, `createSharedSubscription` to export reusable, type-safe shared resources that persist across `clearAll()` calls. |
 
 
 ## 🏗️ Sharing State (`useSharedState`)
@@ -298,8 +297,8 @@ Signature:
 
 `state` shape: `{ data?: T; isLoading: boolean; error?: unknown; subscribed: boolean }`
 
-The `subscriber` function receives an object with three callbacks:
-- `next(data)`: Update the shared data
+The `subscriber` function receives three callbacks:
+- `set(data)`: Update the shared data
 - `error(error)`: Handle errors 
 - `complete()`: Mark loading as complete
 - Returns: Optional cleanup function (called on unsubscribe/unmount)
@@ -312,12 +311,12 @@ import { createSharedSubscription } from 'react-shared-states';
 import { db } from './firebase-config';
 
 export const userSubscription = createSharedSubscription(
-  ({ next, error, complete }) => {
+  (set, error, complete) => {
     const userDocRef = doc(db, 'users', 'some-user-id');
     const unsubscribe = onSnapshot(userDocRef, 
       (doc) => {
         if (doc.exists()) {
-          next(doc.data());
+          set(doc.data());
         } else {
           error(new Error('User not found'));
         }
@@ -361,13 +360,13 @@ import { useSharedSubscription } from 'react-shared-states';
 function ChatRoom({ roomId }: { roomId: string }) {
   const { state, trigger } = useSharedSubscription(
     `chat-${roomId}`,
-    ({ next, error, complete }) => {
+    (set, error, complete) => {
       const ws = new WebSocket(`ws://chat-server/${roomId}`);
       
       ws.onopen = () => complete();
       ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
-        next(prev => [...(prev || []), message]);
+        set(prev => [...(prev || []), message]);
       };
       ws.onerror = error;
       
@@ -401,12 +400,12 @@ import { useSharedSubscription } from 'react-shared-states';
 function LiveUpdates() {
   const { state, trigger } = useSharedSubscription(
     'live-updates',
-    ({ next, error, complete }) => {
+    (set, error, complete) => {
       const eventSource = new EventSource('/api/live-updates');
       
       eventSource.onopen = () => complete();
       eventSource.onmessage = (event) => {
-        next(JSON.parse(event.data));
+        set(JSON.parse(event.data));
       };
       eventSource.onerror = error;
       
@@ -428,15 +427,14 @@ Subscription semantics:
 * `unsubscribe()` closes the connection and clears the subscribed state.
 * Automatic cleanup on component unmount when no other components are listening.
 * Components mounting later instantly get the latest `data` without re-subscribing.
-* Subscriptions created with `createSharedSubscription` are **static** and persist across `clearAll()` calls.
 
 
 ## 🛰️ Static APIs (outside React)
 ## 🏛️ Static/Global Shared Resource Creation
 
-For large apps, you can create and export shared state, function, or subscription objects for type safety and to avoid key collisions. This pattern is similar to Zustand or Jotai stores.
-
-**Static resources created with `createShared...` functions are not cleared by `clearAll()` by default**, making them ideal for data that should persist across general state resets.
+For large apps, you can create and export shared state, function,
+or subscription objects for type safety and to avoid key collisions.
+This pattern is similar to Zustand or Jotai stores:
 
 ```ts
 import { createSharedState, createSharedFunction, createSharedSubscription, useSharedState, useSharedFunction, useSharedSubscription } from 'react-shared-states';
@@ -444,7 +442,7 @@ import { createSharedState, createSharedFunction, createSharedSubscription, useS
 // Create and export shared resources
 export const counterState = createSharedState(0);
 export const fetchUserFunction = createSharedFunction(() => fetch('/api/me').then(r => r.json()));
-export const chatSubscription = createSharedSubscription(({ next, error, complete }) => {/* ... */});
+export const chatSubscription = createSharedSubscription((set, error, complete) => {/* ... */});
 
 // Use anywhere in your app
 const [count, setCount] = useSharedState(counterState);
@@ -469,12 +467,6 @@ const userScoped = sharedStatesApi.get('bootstrap-data', 'myScope');
 // Inspect all (returns nested object: { [scope]: { [key]: value } })
 console.log(sharedStatesApi.getAll());
 
-// Clear all non-static keys in all scopes
-sharedStatesApi.clearAll();
-
-// Clear all keys, including static ones
-sharedStatesApi.clearAll(false, true);
-
 // Clear all keys in a scope
 sharedStatesApi.clearScope('myScope');
 
@@ -489,8 +481,8 @@ const subStateScoped = sharedSubscriptionsApi.get('live-chat', 'myScope');
 
 ## API summary:
 
-| API                      | Methods                                                                                                                                                   |
-|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| API                      | Methods                                                                                                                                                                                 |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `sharedStatesApi`        | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
 | `sharedFunctionsApi`     | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
 | `sharedSubscriptionsApi` | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
@@ -536,7 +528,7 @@ Two providers sharing the same `scopeName` act as a single logical scope even if
 Yes. Call `sharedStatesApi.set(...)` during bootstrap, then first client hook usage will pick it up.
 
 **Q: How do I avoid accidental key collisions?**  
-Prefix keys by domain (e.g. `user:profile`, `cart:items`) or rely on provider scoping and `createShared...` functions.
+Prefix keys by domain (e.g. `user:profile`, `cart:items`) or rely on provider scoping.
 
 **Q: Why is my async function not re-running?**  
 It's cached. Use `forceTrigger()` or `clear()`.
@@ -685,8 +677,8 @@ Signature:
 
 The `subscriber` function receives three callbacks:
 - `set(data)`: Update the shared data
-- `onError(error)`: Handle errors 
-- `onCompletion()`: Mark loading as complete
+- `error(error)`: Handle errors 
+- `complete()`: Mark loading as complete
 - Returns: Optional cleanup function (called on unsubscribe/unmount)
 
 ### Pattern: Firebase Firestore real-time listener
@@ -697,8 +689,23 @@ import { createSharedSubscription } from 'react-shared-states';
 import { db } from './firebase-config';
 
 export const userSubscription = createSharedSubscription(
-  async (set, onError, onCompletion) => {
-    // ...same as before
+  (set, error, complete) => {
+    const userDocRef = doc(db, 'users', 'some-user-id');
+    const unsubscribe = onSnapshot(userDocRef, 
+      (doc) => {
+        if (doc.exists()) {
+          set(doc.data());
+        } else {
+          error(new Error('User not found'));
+        }
+        complete();
+      }, 
+      (err) => {
+        error(err);
+        complete();
+      }
+    );
+    return unsubscribe;
   }
 );
 
@@ -731,15 +738,15 @@ import { useSharedSubscription } from 'react-shared-states';
 function ChatRoom({ roomId }: { roomId: string }) {
   const { state, trigger } = useSharedSubscription(
     `chat-${roomId}`,
-    (set, onError, onCompletion) => {
+    (set, error, complete) => {
       const ws = new WebSocket(`ws://chat-server/${roomId}`);
       
-      ws.onopen = () => onCompletion();
+      ws.onopen = () => complete();
       ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
         set(prev => [...(prev || []), message]);
       };
-      ws.onerror = onError;
+      ws.onerror = error;
       
       return () => ws.close();
     }
@@ -771,14 +778,14 @@ import { useSharedSubscription } from 'react-shared-states';
 function LiveUpdates() {
   const { state, trigger } = useSharedSubscription(
     'live-updates',
-    (set, onError, onCompletion) => {
+    (set, error, complete) => {
       const eventSource = new EventSource('/api/live-updates');
       
-      eventSource.onopen = () => onCompletion();
+      eventSource.onopen = () => complete();
       eventSource.onmessage = (event) => {
         set(JSON.parse(event.data));
       };
-      eventSource.onerror = onError;
+      eventSource.onerror = error;
       
       return () => eventSource.close();
     }
@@ -811,7 +818,7 @@ import { createSharedState, createSharedFunction, createSharedSubscription, useS
 // Create and export shared resources
 export const counterState = createSharedState(0);
 export const fetchUserFunction = createSharedFunction(() => fetch('/api/me').then(r => r.json()));
-export const chatSubscription = createSharedSubscription((set, onError, onCompletion) => {/* ... */});
+export const chatSubscription = createSharedSubscription((set, error, complete) => {/* ... */});
 
 // Use anywhere in your app
 const [count, setCount] = useSharedState(counterState);
@@ -850,11 +857,11 @@ const subStateScoped = sharedSubscriptionsApi.get('live-chat', 'myScope');
 
 ## API summary:
 
-| API                      | Methods                                                                                                                                                   |
-|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `sharedStatesApi`        | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll()`, `clearScope(scopeName?)`, `getAll()` |
-| `sharedFunctionsApi`     | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll()`, `clearScope(scopeName?)`, `getAll()` |
-| `sharedSubscriptionsApi` | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll()`, `clearScope(scopeName?)`, `getAll()` |
+| API                      | Methods                                                                                                                                                                                 |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `sharedStatesApi`        | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
+| `sharedFunctionsApi`     | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
+| `sharedSubscriptionsApi` | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
 
 `scopeName` defaults to `"_global"`. Internally, keys are stored as `${scope}//${key}`. The `.getAll()` method returns a nested object: `{ [scope]: { [key]: value } }`.
 
@@ -884,14 +891,15 @@ Two providers sharing the same `scopeName` act as a single logical scope even if
 
 ## 🧪 Testing Tips
 * Use static APIs to assert state after component interactions.
-* `sharedStatesApi.clearAll()`, `sharedFunctionsApi.clearAll()`, `sharedSubscriptionsApi.clearAll()` in `afterEach` to isolate tests.
+* `sharedStatesApi.clearAll(false, true)`, `sharedFunctionsApi.clearAll(false, true)`, `sharedSubscriptionsApi.clearAll(false, true)` in `afterEach` to isolate tests and clear static states.
 * For async functions: trigger once, await UI stabilization, assert `results` present.
 * For subscriptions: mock the subscription source (Firebase, WebSocket, etc.) and verify data flow.
 
 
 ## ❓ FAQ
 **Q: How do I reset a single shared state?**  
-`sharedStatesApi.clear('key')` or inside component: call a setter with the initial value.
+`sharedStatesApi.clear('key')`. If the state was created with `createSharedState`, it will reset to its initial value.
+Otherwise, it will be removed.
 
 **Q: Can I pre-hydrate data on the server?**  
 Yes. Call `sharedStatesApi.set(...)` during bootstrap, then first client hook usage will pick it up.
