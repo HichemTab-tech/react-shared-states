@@ -4,7 +4,7 @@ export type AFunction<R = unknown, Args extends unknown[] = unknown[]> = (...arg
 
 export type Prefix = "_global" | ({} & string);
 
-export interface DataMapValue {
+export interface SharedValue {
     listeners: AFunction[],
     isStatic?: true,
 }

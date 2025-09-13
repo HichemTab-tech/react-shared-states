@@ -1,12 +1,15 @@
 import {useMemo, useSyncExternalStore} from "react";
 import type {Prefix, SharedCreated} from "../types";
-import {SharedApi, SharedData} from "../SharedData";
+import {SharedValuesApi, SharedValuesManager} from "../SharedValuesManager";
 import useShared from "./use-shared";
 import {ensureNonEmptyString} from "../lib/utils";
+import type {SharedValue} from "../types";
 
-class SharedStatesData extends SharedData<{
-    value: unknown
-}> {
+interface SharedState<T> extends SharedValue {
+    value: T
+}
+
+class SharedStatesManager extends SharedValuesManager<SharedState<unknown>, { value: unknown }> {
     defaultValue() {
         return {value: undefined};
     }
@@ -21,9 +24,10 @@ class SharedStatesData extends SharedData<{
     }
 }
 
-export class SharedStatesApi extends SharedApi<{
-    value: unknown
-}>{
+export class SharedStatesApi extends SharedValuesApi<SharedState<unknown>, { value: unknown }>{
+    constructor(sharedStateManager: SharedStatesManager) {
+        super(sharedStateManager);
+    }
     get<T, S extends string = string>(key: S, scopeName?: Prefix): T;
     get<T>(sharedStateCreated: SharedStateCreated<T>): T;
     get<T, S extends string = string>(key: S | SharedStateCreated<T>, scopeName: Prefix = "_global") {
@@ -43,16 +47,16 @@ export class SharedStatesApi extends SharedApi<{
     }
 }
 
-const sharedStatesData = new SharedStatesData();
+const sharedStatesManager = new SharedStatesManager();
 
-export const sharedStatesApi = new SharedStatesApi(sharedStatesData);
+export const sharedStatesApi = new SharedStatesApi(sharedStatesManager);
 
 export interface SharedStateCreated<T> extends SharedCreated{
     initialValue: T
 }
 
 export const createSharedState = <T>(initialValue: T, scopeName?: Prefix): SharedStateCreated<T> => {
-    return sharedStatesData.createStatic<SharedStateCreated<T>>({initialValue}, scopeName);
+    return sharedStatesManager.createStatic<SharedStateCreated<T>>({initialValue}, scopeName);
 }
 
 export function useSharedState<T, S extends string>(key: S, initialValue: T, scopeName?: Prefix): readonly [T, (v: T | ((prev: T) => T)) => void];
@@ -78,30 +82,30 @@ export function useSharedState<T, S extends string>(
 
     const {prefix} = useShared(scope);
 
-    sharedStatesData.initValue(keyStr, prefix, initVal);
+    sharedStatesManager.initValue(keyStr, prefix, initVal);
 
     const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore>[0]>(() => (listener) => {
-        sharedStatesData.initValue(keyStr, prefix, initialValue);
-        sharedStatesData.addListener(keyStr, prefix, listener);
+        sharedStatesManager.initValue(keyStr, prefix, initialValue);
+        sharedStatesManager.addListener(keyStr, prefix, listener);
 
         return () => {
-            sharedStatesData.removeListener(keyStr, prefix, listener);
+            sharedStatesManager.removeListener(keyStr, prefix, listener);
         }
     }, []);
 
-    const externalStoreSnapshotGetter = useMemo(() => () => sharedStatesData.get(keyStr, prefix)?.value as T, []);
+    const externalStoreSnapshotGetter = useMemo(() => () => sharedStatesManager.get(keyStr, prefix)?.value as T, []);
 
     const dataValue = useSyncExternalStore(externalStoreSubscriber, externalStoreSnapshotGetter);
 
     const setData = (newValueOrCallbackToNewValue: T|((prev: T) => T)) => {
-        const newValue = (typeof newValueOrCallbackToNewValue === "function") ? (newValueOrCallbackToNewValue as (prev: T) => T)(sharedStatesData.get(keyStr, prefix)?.value as T) : newValueOrCallbackToNewValue
+        const newValue = (typeof newValueOrCallbackToNewValue === "function") ? (newValueOrCallbackToNewValue as (prev: T) => T)(sharedStatesManager.get(keyStr, prefix)?.value as T) : newValueOrCallbackToNewValue
         if (newValue !== dataValue) {
-            sharedStatesData.setValue(keyStr, prefix, {value:newValue});
-            sharedStatesData.callListeners(keyStr, prefix);
+            sharedStatesManager.setValue(keyStr, prefix, {value:newValue});
+            sharedStatesManager.callListeners(keyStr, prefix);
         }
     }
 
-    sharedStatesData.useEffect(keyStr, prefix);
+    sharedStatesManager.useEffect(keyStr, prefix);
 
     return [
         dataValue,
