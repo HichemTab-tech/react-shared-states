@@ -4,8 +4,10 @@ import {render, screen, fireEvent, act, cleanup} from '@testing-library/react'
 import {
     createSharedFunction,
     createSharedState, createSharedSubscription,
+    sharedFunctionsApi,
     SharedStatesProvider,
     sharedStatesApi,
+    sharedSubscriptionsApi,
     useSharedFunction,
     useSharedState,
     useSharedSubscription
@@ -279,6 +281,109 @@ describe('useSharedFunction', () => {
         expect(mockApiCall).toHaveBeenCalledTimes(1);
         expect(screen.getByTestId('result').textContent).toBe('result: arg1');
     });
+
+    it('should allow direct api manipulation with createSharedFunction objects', () => {
+        const sharedFunction = createSharedFunction(async (arg: string) => `result: ${arg}`);
+
+        // Get initial state
+        const initialState = sharedFunctionsApi.get(sharedFunction);
+        expect(initialState.data).toBeUndefined();
+        expect(initialState.isLoading).toBe(false);
+        expect(initialState.error).toBeUndefined();
+
+        // Set a new state
+        act(() => {
+            sharedFunctionsApi.set(sharedFunction, {
+                fnState: {
+                    data: 'test data',
+                    isLoading: true,
+                    error: 'test error',
+                    force: () => {},
+                    clear: () => {},
+                    call: async () => 'test data',
+                }
+            });
+        });
+
+        // Get updated state
+        const updatedState = sharedFunctionsApi.get(sharedFunction);
+        expect(updatedState.data).toBe('test data');
+        expect(updatedState.isLoading).toBe(true);
+        expect(updatedState.error).toBe('test error');
+
+        // Clear the value
+        act(() => {
+            sharedFunctionsApi.clear(sharedFunction);
+        });
+
+        // Get value after clear (should be initial value)
+        const clearedState = sharedFunctionsApi.get(sharedFunction);
+        expect(clearedState.data).toBeUndefined();
+        expect(clearedState.isLoading).toBe(false);
+        expect(clearedState.error).toBeUndefined();
+    });
+});
+
+describe('useSharedSubscription', () => {
+    it('should handle subscription lifecycle', () => {
+        const mockSubscriber = vi.fn<[SubscriberEvents<string>], Unsubscribe>(({next}) => {
+            next('initial data');
+            return () => {
+            };
+        });
+
+        const TestComponent = () => {
+            const {data} = useSharedSubscription('test-sub', mockSubscriber);
+            return <span data-testid="data">{data}</span>;
+        };
+
+        render(<TestComponent/>);
+
+        expect(mockSubscriber).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId('data').textContent).toBe('initial data');
+    });
+
+    it('should allow direct api manipulation with createSharedSubscription objects', () => {
+        const mockSubscriber = vi.fn();
+        const sharedSubscription = createSharedSubscription(mockSubscriber);
+
+        // Get initial state
+        const initialState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(initialState.data).toBeUndefined();
+        expect(initialState.isLoading).toBe(true);
+        expect(initialState.error).toBeUndefined();
+
+        // Set a new state
+        act(() => {
+            sharedSubscriptionsApi.set(sharedSubscription, {
+                fnState: {
+                    data: 'test data',
+                    isLoading: false,
+                    error: 'test error',
+                    subscribed: true,
+                    unsubscribe: () => {},
+                    subscribe: () => {},
+                }
+            });
+        });
+
+        // Get updated state
+        const updatedState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(updatedState.data).toBe('test data');
+        expect(updatedState.isLoading).toBe(false);
+        expect(updatedState.error).toBe('test error');
+
+        // Clear the value
+        act(() => {
+            sharedSubscriptionsApi.clear(sharedSubscription);
+        });
+
+        // Get value after clear (should be initial value)
+        const clearedState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(clearedState.data).toBeUndefined();
+        expect(clearedState.isLoading).toBe(true);
+        expect(clearedState.error).toBeUndefined();
+    });
 });
 
 describe('useSharedSubscription', () => {
@@ -378,5 +483,46 @@ describe('useSharedSubscription', () => {
         });
         expect(mockSubscriber).toHaveBeenCalledTimes(1);
         expect(screen.getByTestId('data').textContent).toBe('initial data');
+    });
+
+    it('should allow direct api manipulation with createSharedSubscription objects', () => {
+        const mockSubscriber = vi.fn();
+        const sharedSubscription = createSharedSubscription(mockSubscriber);
+
+        // Get initial state
+        const initialState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(initialState.data).toBeUndefined();
+        expect(initialState.isLoading).toBe(true);
+        expect(initialState.error).toBeUndefined();
+
+        // Set a new state
+        act(() => {
+            sharedSubscriptionsApi.set(sharedSubscription, {
+                fnState: {
+                    data: 'test data',
+                    isLoading: false,
+                    error: 'test error',
+                    unsubscribe: () => {},
+                    subscribe: () => {},
+                }
+            });
+        });
+
+        // Get updated state
+        const updatedState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(updatedState.data).toBe('test data');
+        expect(updatedState.isLoading).toBe(false);
+        expect(updatedState.error).toBe('test error');
+
+        // Clear the value
+        act(() => {
+            sharedSubscriptionsApi.clear(sharedSubscription);
+        });
+
+        // Get value after clear (should be initial value)
+        const clearedState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(clearedState.data).toBeUndefined();
+        expect(clearedState.isLoading).toBe(true);
+        expect(clearedState.error).toBeUndefined();
     });
 });
