@@ -24,7 +24,7 @@ class SharedStatesManager extends SharedValuesManager<SharedState<unknown>, { va
     }
 }
 
-export class SharedStatesApi extends SharedValuesApi<SharedState<unknown>, { value: unknown }>{
+export class SharedStatesApi extends SharedValuesApi<SharedState<unknown>, { value: unknown }, unknown>{
     constructor(sharedStateManager: SharedStatesManager) {
         super(sharedStateManager);
     }
@@ -32,9 +32,9 @@ export class SharedStatesApi extends SharedValuesApi<SharedState<unknown>, { val
     get<T>(sharedStateCreated: SharedStateCreated<T>): T;
     get<T, S extends string = string>(key: S | SharedStateCreated<T>, scopeName: Prefix = "_global") {
         if (typeof key !== "string") {
-            return super.get(key)?.value as T;
+            return (super.get(key) as SharedState<T>)?.value;
         }
-        return super.get(key, scopeName)?.value as T;
+        return (super.get(key, scopeName) as SharedState<T>)?.value;
     }
     set<T, S extends string = string>(key: S, value: T, scopeName?: Prefix): void;
     set<T>(sharedStateCreated: SharedStateCreated<T>, value: T): void;

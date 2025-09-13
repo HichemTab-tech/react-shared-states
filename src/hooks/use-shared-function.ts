@@ -34,17 +34,17 @@ class SharedFunctionsManager extends SharedValuesManager<SharedFunction<unknown>
     }
 }
 
-export class SharedFunctionsApi extends SharedValuesApi<SharedFunction<unknown>, { fnState: SharedFunctionValue<unknown> }>{
+export class SharedFunctionsApi extends SharedValuesApi<SharedFunction<unknown>, { fnState: SharedFunctionValue<unknown> }, SharedFunctionValue<unknown>>{
     constructor(sharedFunctionManager: SharedFunctionsManager) {
         super(sharedFunctionManager);
     }
-    get<T, S extends string = string>(key: S, scopeName?: Prefix): SharedFunction<T>;
-    get<T, Args extends unknown[]>(sharedFunctionCreated: SharedFunctionCreated<T, Args>): SharedFunction<T>;
+    get<T, S extends string = string>(key: S, scopeName?: Prefix): SharedFunctionValue<T>;
+    get<T, Args extends unknown[]>(sharedFunctionCreated: SharedFunctionCreated<T, Args>): SharedFunctionValue<T>;
     get<T, Args extends unknown[], S extends string = string>(key: S | SharedFunctionCreated<T, Args>, scopeName: Prefix = "_global") {
         if (typeof key !== "string") {
-            return super.get(key) as SharedFunction<T>;
+            return (super.get(key) as unknown as SharedFunction<T>)?.fnState;
         }
-        return super.get(key, scopeName) as SharedFunction<T>;
+        return (super.get(key, scopeName) as unknown as SharedFunction<T>)?.fnState;
     }
     set<T, S extends string = string>(key: S, value: { fnState: SharedFunctionValue<T> }, scopeName?: Prefix): void;
     set<T, Args extends unknown[]>(sharedFunctionCreated: SharedFunctionCreated<T, Args>, value: { fnState: SharedFunctionValue<T> }): void;

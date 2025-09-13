@@ -128,8 +128,7 @@ export abstract class SharedValuesManager<T extends SharedValue, V> {
     }
 }
 
-// noinspection JSUnusedGlobalSymbols
-export class SharedValuesApi<T extends SharedValue, V> {
+export class SharedValuesApi<T extends SharedValue, V, R = T> {
     constructor(protected sharedData: SharedValuesManager<T, V>) {}
 
     /**
@@ -137,8 +136,8 @@ export class SharedValuesApi<T extends SharedValue, V> {
      * @param key
      * @param scopeName
      */
-    get<S extends string = string>(key: S, scopeName: Prefix): T;
-    get<S extends string = string>(sharedCreated: SharedCreated): T;
+    get<S extends string = string>(key: S, scopeName: Prefix): R;
+    get<S extends string = string>(sharedCreated: SharedCreated): R;
     get<S extends string = string>(key: S | SharedCreated, scopeName?: Prefix) {
         let keyStr: string;
         let scope: Prefix | undefined = scopeName;
@@ -151,7 +150,8 @@ export class SharedValuesApi<T extends SharedValue, V> {
             keyStr = ensureNonEmptyString(key);
         }
         const prefix: Prefix = scope || "_global";
-        return this.sharedData.get(keyStr, prefix) as T;
+        const data = this.sharedData.get(keyStr, prefix);
+        return data as R;
     }
 
     /**

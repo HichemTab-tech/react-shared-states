@@ -4,20 +4,20 @@ import {SharedValuesApi, SharedValuesManager} from "../SharedValuesManager";
 import useShared from "./use-shared";
 import {ensureNonEmptyString, log} from "../lib/utils";
 
-type Unsubscribe = () => void;
+export type Unsubscribe = () => void;
 export namespace SubscriberEvents{
     export type OnError = (error: unknown) => void;
     export type OnCompletion = () => void;
     export type Set<T> = (value: T) => void
 }
 
-type Subscriber<T> = (set: SubscriberEvents.Set<T>, onError: SubscriberEvents.OnError, onCompletion: SubscriberEvents.OnCompletion) => PotentialPromise<Unsubscribe | void | undefined>;
+export type Subscriber<T> = (set: SubscriberEvents.Set<T>, onError: SubscriberEvents.OnError, onCompletion: SubscriberEvents.OnCompletion) => PotentialPromise<Unsubscribe | void | undefined>;
 
 type SharedSubscriptionValue<T> = {
     data?: T;
     isLoading: boolean;
     error?: unknown;
-    subscribed: boolean
+    subscribed?: boolean
 }
 
 interface SharedSubscription<T> extends SharedValue {
@@ -71,17 +71,17 @@ class SharedSubscriptionsManager extends SharedValuesManager<SharedSubscription<
     }
 }
 
-export class SharedSubscriptionsApi extends SharedValuesApi<SharedSubscription<unknown>, { fnState: SharedSubscriptionValue<unknown> }>{
+export class SharedSubscriptionsApi extends SharedValuesApi<SharedSubscription<unknown>, { fnState: SharedSubscriptionValue<unknown> }, SharedSubscriptionValue<unknown>>{
     constructor(sharedSubscriptionsManager: SharedSubscriptionsManager) {
         super(sharedSubscriptionsManager);
     }
-    get<T, S extends string = string>(key: S, scopeName?: Prefix): SharedSubscription<T>;
-    get<T>(sharedSubscriptionCreated: SharedSubscriptionCreated<T>): SharedSubscription<T>;
+    get<T, S extends string = string>(key: S, scopeName?: Prefix): SharedSubscriptionValue<T>;
+    get<T>(sharedSubscriptionCreated: SharedSubscriptionCreated<T>): SharedSubscriptionValue<T>;
     get<T, S extends string = string>(key: S | SharedSubscriptionCreated<T>, scopeName: Prefix = "_global") {
         if (typeof key !== "string") {
-            return super.get(key) as SharedSubscription<T>;
+            return (super.get(key) as unknown as SharedSubscription<T>)?.fnState;
         }
-        return super.get(key, scopeName) as SharedSubscription<T>;
+        return (super.get(key, scopeName) as unknown as SharedSubscription<T>)?.fnState;
     }
     set<T, S extends string = string>(key: S, value: { fnState: SharedSubscriptionValue<T> }, scopeName?: Prefix): void;
     set<T>(sharedSubscriptionCreated: SharedSubscriptionCreated<T>, value: { fnState: SharedSubscriptionValue<T> }): void;

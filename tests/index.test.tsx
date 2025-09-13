@@ -1,18 +1,19 @@
-import {describe, it, expect, beforeEach, vi, afterEach} from 'vitest'
-import React from 'react'
-import {render, screen, fireEvent, act, cleanup} from '@testing-library/react'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import React, {useEffect} from 'react'
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react'
 import {
     createSharedFunction,
-    createSharedState, createSharedSubscription,
+    createSharedState,
+    createSharedSubscription,
     sharedFunctionsApi,
-    SharedStatesProvider,
     sharedStatesApi,
+    SharedStatesProvider,
     sharedSubscriptionsApi,
     useSharedFunction,
     useSharedState,
     useSharedSubscription
 } from "../src";
-import type {SubscriberEvents} from "../src/hooks/use-shared-subscription";
+import type {Subscriber, SubscriberEvents} from "../src/hooks/use-shared-subscription";
 
 // Mocking random to have predictable keys for created states/functions/subscriptions
 vi.mock('../src/lib/utils', async (importActual) => {
@@ -287,7 +288,7 @@ describe('useSharedFunction', () => {
 
         // Get initial state
         const initialState = sharedFunctionsApi.get(sharedFunction);
-        expect(initialState.data).toBeUndefined();
+        expect(initialState.results).toBeUndefined();
         expect(initialState.isLoading).toBe(false);
         expect(initialState.error).toBeUndefined();
 
@@ -295,19 +296,16 @@ describe('useSharedFunction', () => {
         act(() => {
             sharedFunctionsApi.set(sharedFunction, {
                 fnState: {
-                    data: 'test data',
+                    results: 'test data',
                     isLoading: true,
                     error: 'test error',
-                    force: () => {},
-                    clear: () => {},
-                    call: async () => 'test data',
                 }
             });
         });
 
         // Get updated state
         const updatedState = sharedFunctionsApi.get(sharedFunction);
-        expect(updatedState.data).toBe('test data');
+        expect(updatedState.results).toBe('test data');
         expect(updatedState.isLoading).toBe(true);
         expect(updatedState.error).toBe('test error');
 
@@ -318,7 +316,7 @@ describe('useSharedFunction', () => {
 
         // Get value after clear (should be initial value)
         const clearedState = sharedFunctionsApi.get(sharedFunction);
-        expect(clearedState.data).toBeUndefined();
+        expect(clearedState.results).toBeUndefined();
         expect(clearedState.isLoading).toBe(false);
         expect(clearedState.error).toBeUndefined();
     });
@@ -326,14 +324,19 @@ describe('useSharedFunction', () => {
 
 describe('useSharedSubscription', () => {
     it('should handle subscription lifecycle', () => {
-        const mockSubscriber = vi.fn<[SubscriberEvents<string>], Unsubscribe>(({next}) => {
-            next('initial data');
+        const mockSubscriber = vi.fn<Subscriber<string>>((set) => {
+            set('initial data');
             return () => {
             };
         });
 
         const TestComponent = () => {
-            const {data} = useSharedSubscription('test-sub', mockSubscriber);
+            const {state: {data}, trigger} = useSharedSubscription('test-sub', mockSubscriber);
+
+            useEffect(() => {
+                trigger();
+            }, []);
+
             return <span data-testid="data">{data}</span>;
         };
 
@@ -350,7 +353,7 @@ describe('useSharedSubscription', () => {
         // Get initial state
         const initialState = sharedSubscriptionsApi.get(sharedSubscription);
         expect(initialState.data).toBeUndefined();
-        expect(initialState.isLoading).toBe(true);
+        expect(initialState.isLoading).toBe(false);
         expect(initialState.error).toBeUndefined();
 
         // Set a new state
@@ -358,11 +361,8 @@ describe('useSharedSubscription', () => {
             sharedSubscriptionsApi.set(sharedSubscription, {
                 fnState: {
                     data: 'test data',
-                    isLoading: false,
+                    isLoading: true,
                     error: 'test error',
-                    subscribed: true,
-                    unsubscribe: () => {},
-                    subscribe: () => {},
                 }
             });
         });
@@ -370,7 +370,7 @@ describe('useSharedSubscription', () => {
         // Get updated state
         const updatedState = sharedSubscriptionsApi.get(sharedSubscription);
         expect(updatedState.data).toBe('test data');
-        expect(updatedState.isLoading).toBe(false);
+        expect(updatedState.isLoading).toBe(true);
         expect(updatedState.error).toBe('test error');
 
         // Clear the value
@@ -381,7 +381,7 @@ describe('useSharedSubscription', () => {
         // Get value after clear (should be initial value)
         const clearedState = sharedSubscriptionsApi.get(sharedSubscription);
         expect(clearedState.data).toBeUndefined();
-        expect(clearedState.isLoading).toBe(true);
+        expect(clearedState.isLoading).toBe(false);
         expect(clearedState.error).toBeUndefined();
     });
 });
@@ -492,7 +492,7 @@ describe('useSharedSubscription', () => {
         // Get initial state
         const initialState = sharedSubscriptionsApi.get(sharedSubscription);
         expect(initialState.data).toBeUndefined();
-        expect(initialState.isLoading).toBe(true);
+        expect(initialState.isLoading).toBe(false);
         expect(initialState.error).toBeUndefined();
 
         // Set a new state
@@ -500,10 +500,8 @@ describe('useSharedSubscription', () => {
             sharedSubscriptionsApi.set(sharedSubscription, {
                 fnState: {
                     data: 'test data',
-                    isLoading: false,
+                    isLoading: true,
                     error: 'test error',
-                    unsubscribe: () => {},
-                    subscribe: () => {},
                 }
             });
         });
@@ -511,7 +509,7 @@ describe('useSharedSubscription', () => {
         // Get updated state
         const updatedState = sharedSubscriptionsApi.get(sharedSubscription);
         expect(updatedState.data).toBe('test data');
-        expect(updatedState.isLoading).toBe(false);
+        expect(updatedState.isLoading).toBe(true);
         expect(updatedState.error).toBe('test error');
 
         // Clear the value
@@ -522,7 +520,7 @@ describe('useSharedSubscription', () => {
         // Get value after clear (should be initial value)
         const clearedState = sharedSubscriptionsApi.get(sharedSubscription);
         expect(clearedState.data).toBeUndefined();
-        expect(clearedState.isLoading).toBe(true);
+        expect(clearedState.isLoading).toBe(false);
         expect(clearedState.error).toBeUndefined();
     });
 });
