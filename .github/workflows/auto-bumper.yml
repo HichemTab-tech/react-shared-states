@@ -128,8 +128,21 @@ jobs:
         if: steps.perm.outputs.allowed == 'true'
         run: |
           pnpm run bump
+
+      - name: Retrieve new version
+        id: ver
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+            core.setOutput('version', String(pkg.version));
+
+      - name: Commit changes
+        if: steps.perm.outputs.allowed == 'true'
+        run: |
           git add package.json
-          git commit -m "chore: bump version"
+          git commit -m "chore: bump version to ${{ steps.ver.outputs.version }}"
           git push
 
       - name: Add comment to PR
@@ -137,11 +150,10 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+            const version = ${{ steps.ver.outputs.version }}
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ Version bumped to ${pkg.version}`
+              body: `✅ Version bumped to ${version}`
             })
