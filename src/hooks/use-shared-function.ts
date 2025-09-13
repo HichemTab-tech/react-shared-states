@@ -1,18 +1,20 @@
-import type {AFunction, Prefix, SharedCreated} from "../types";
+import type {AFunction, Prefix, SharedCreated, SharedValue} from "../types";
 import {useMemo, useSyncExternalStore} from "react";
-import {SharedApi, SharedData} from "../SharedData";
+import {SharedValuesApi, SharedValuesManager} from "../SharedValuesManager";
 import useShared from "./use-shared";
-import {ensureNonEmptyString, random} from "../lib/utils";
+import {ensureNonEmptyString} from "../lib/utils";
 
-type SharedFunctionsState<T> = {
-    fnState: {
-        results?: T;
-        isLoading: boolean;
-        error?: unknown;
-    }
+type SharedFunctionValue<T> = {
+    results?: T;
+    isLoading: boolean;
+    error?: unknown;
 }
 
-class SharedFunctionsData extends SharedData<SharedFunctionsState<unknown>> {
+interface SharedFunction<T> extends SharedValue {
+    fnState: SharedFunctionValue<T>
+}
+
+class SharedFunctionsManager extends SharedValuesManager<SharedFunction<unknown>, { fnState: SharedFunctionValue<unknown> }> {
     defaultValue() {
         return {
             fnState: {
@@ -23,48 +25,52 @@ class SharedFunctionsData extends SharedData<SharedFunctionsState<unknown>> {
         };
     }
 
-    init(key: string, prefix: Prefix) {
-        super.init(key, prefix, this.defaultValue());
+    initValue(key: string, prefix: Prefix, isStatic: boolean = false) {
+        super.init(key, prefix, this.defaultValue(), isStatic);
     }
 
-    setValue<T>(key: string, prefix: Prefix, data: SharedFunctionsState<T>) {
+    setValue<T>(key: string, prefix: Prefix, data: { fnState: SharedFunctionValue<T> }) {
         super.setValue(key, prefix, data);
     }
 }
 
-export class SharedFunctionsApi extends SharedApi<SharedFunctionsState<unknown>>{
-    get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        return sharedFunctionsData.get(key, prefix)?.fnState as T;
+export class SharedFunctionsApi extends SharedValuesApi<SharedFunction<unknown>, { fnState: SharedFunctionValue<unknown> }, SharedFunctionValue<unknown>>{
+    constructor(sharedFunctionManager: SharedFunctionsManager) {
+        super(sharedFunctionManager);
     }
-    set<T, S extends string = string>(key: S, fnState: SharedFunctionsState<T>, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        sharedFunctionsData.setValue(key, prefix, fnState);
+    get<T, S extends string = string>(key: S, scopeName?: Prefix): SharedFunctionValue<T>;
+    get<T, Args extends unknown[]>(sharedFunctionCreated: SharedFunctionCreated<T, Args>): SharedFunctionValue<T>;
+    get<T, Args extends unknown[], S extends string = string>(key: S | SharedFunctionCreated<T, Args>, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            return (super.get(key) as unknown as SharedFunction<T>)?.fnState;
+        }
+        return (super.get(key, scopeName) as unknown as SharedFunction<T>)?.fnState;
+    }
+    set<T, S extends string = string>(key: S, value: { fnState: SharedFunctionValue<T> }, scopeName?: Prefix): void;
+    set<T, Args extends unknown[]>(sharedFunctionCreated: SharedFunctionCreated<T, Args>, value: { fnState: SharedFunctionValue<T> }): void;
+    set<T, Args extends unknown[], S extends string = string>(key: S | SharedFunctionCreated<T, Args>, value: { fnState: SharedFunctionValue<T> }, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            super.set(key, value);
+            return;
+        }
+        super.set(key, value, scopeName);
     }
 }
 
-const sharedFunctionsData = new SharedFunctionsData();
+const sharedFunctionsManager = new SharedFunctionsManager();
 
-export const sharedFunctionsApi = new SharedFunctionsApi(sharedFunctionsData);
+export const sharedFunctionsApi = new SharedFunctionsApi(sharedFunctionsManager);
 
 interface SharedFunctionCreated<T, Args extends unknown[]> extends SharedCreated{
     fn: AFunction<T, Args>
 }
 
 export const createSharedFunction = <T, Args extends unknown[]>(fn: AFunction<T, Args>, scopeName?: Prefix): SharedFunctionCreated<T, Args> => {
-    const prefix: Prefix = scopeName ?? scopeName ?? "_global";
-
-    return {
-        key: random(),
-        prefix,
-        fn,
-    }
+    return sharedFunctionsManager.createStatic<SharedFunctionCreated<T, Args>>({fn}, scopeName);
 }
 
 export type SharedFunctionStateReturn<T, Args extends unknown[]> = {
-    readonly state: NonNullable<SharedFunctionsState<T>['fnState']>,
+    readonly state: NonNullable<SharedFunctionValue<T>>,
     readonly trigger: (...args: Args) => void,
     readonly forceTrigger: (...args: Args) => void,
     readonly clear: () => void,
@@ -93,45 +99,45 @@ export function useSharedFunction <T, Args extends unknown[], S extends string =
     }
     const {prefix} = useShared(scope);
 
-    sharedFunctionsData.init(keyStr, prefix);
+    sharedFunctionsManager.initValue(keyStr, prefix);
 
-    const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>>[0]>(
+    const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedFunctionValue<T>>>>[0]>(
         () =>
             (listener) => {
-                sharedFunctionsData.init(keyStr, prefix);
-                sharedFunctionsData.addListener(keyStr, prefix, listener);
+                sharedFunctionsManager.initValue(keyStr, prefix);
+                sharedFunctionsManager.addListener(keyStr, prefix, listener);
 
                 return () => {
-                    sharedFunctionsData.removeListener(keyStr, prefix, listener);
+                    sharedFunctionsManager.removeListener(keyStr, prefix, listener);
                 }
             },
         []
     );
 
-    const externalStoreSnapshotGetter = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>>[1]>(
+    const externalStoreSnapshotGetter = useMemo<Parameters<typeof useSyncExternalStore<NonNullable<SharedFunctionValue<T>>>>[1]>(
         () =>
             () =>
-                sharedFunctionsData.get(keyStr, prefix)!.fnState as NonNullable<SharedFunctionsState<T>['fnState']>,
+                sharedFunctionsManager.get(keyStr, prefix)!.fnState as NonNullable<SharedFunctionValue<T>>,
         []
     );
 
-    const state = useSyncExternalStore<NonNullable<SharedFunctionsState<T>['fnState']>>(externalStoreSubscriber, externalStoreSnapshotGetter);
+    const state = useSyncExternalStore<NonNullable<SharedFunctionValue<T>>>(externalStoreSubscriber, externalStoreSnapshotGetter);
 
     const trigger = async (force: boolean, ...args: Args) => {
-        const entry = sharedFunctionsData.get(keyStr, prefix)!;
+        const entry = sharedFunctionsManager.get(keyStr, prefix)!;
         if (!force && (entry.fnState.isLoading || entry.fnState.results !== undefined)) return entry.fnState;
         entry.fnState = { ...entry.fnState, isLoading: true, error: undefined };
-        entry.listeners.forEach(l => l());
+        sharedFunctionsManager.callListeners(keyStr, prefix);
         try {
             const results: Awaited<T> = await fnVal(...args);
             entry.fnState = { results, isLoading: false, error: undefined };
         } catch (error) {
             entry.fnState = { ...entry.fnState, isLoading: false, error };
         }
-        entry.listeners.forEach(l => l());
+        sharedFunctionsManager.callListeners(keyStr, prefix);
     };
 
-    sharedFunctionsData.useEffect(keyStr, prefix);
+    sharedFunctionsManager.useEffect(keyStr, prefix);
 
     // noinspection JSUnusedGlobalSymbols
     return {
@@ -143,10 +149,10 @@ export function useSharedFunction <T, Args extends unknown[], S extends string =
             void trigger(true, ...args);
         },
         clear: () => {
-            const entry = sharedFunctionsData.get(keyStr, prefix);
+            const entry = sharedFunctionsManager.get(keyStr, prefix);
             if (entry) {
-                entry.fnState = sharedFunctionsData.defaultValue().fnState;
-                sharedFunctionsData.callListeners(keyStr, prefix);
+                entry.fnState = sharedFunctionsManager.defaultValue().fnState;
+                sharedFunctionsManager.callListeners(keyStr, prefix);
             }
         }
     } as const;

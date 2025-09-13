@@ -1,15 +1,19 @@
-import {describe, it, expect, beforeEach, vi, afterEach} from 'vitest'
-import React from 'react'
-import {render, screen, fireEvent, act, cleanup} from '@testing-library/react'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import React, {useEffect} from 'react'
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react'
 import {
     createSharedFunction,
-    createSharedState, createSharedSubscription,
+    createSharedState,
+    createSharedSubscription,
+    sharedFunctionsApi,
+    sharedStatesApi,
     SharedStatesProvider,
+    sharedSubscriptionsApi,
     useSharedFunction,
     useSharedState,
     useSharedSubscription
 } from "../src";
-import type {SubscriberEvents} from "../src/hooks/use-shared-subscription";
+import type {Subscriber, SubscriberEvents} from "../src/hooks/use-shared-subscription";
 
 // Mocking random to have predictable keys for created states/functions/subscriptions
 vi.mock('../src/lib/utils', async (importActual) => {
@@ -139,6 +143,29 @@ describe('useSharedState', () => {
 
         expect(screen.getByTestId('value1').textContent).toBe('15');
     });
+
+    it('should allow direct api manipulation with createSharedState objects', () => {
+        const sharedCounter = createSharedState(100);
+
+        // Get initial value
+        expect(sharedStatesApi.get(sharedCounter)).toBe(100);
+
+        // Set a new value
+        act(() => {
+            sharedStatesApi.set(sharedCounter, 200);
+        });
+
+        // Get updated value
+        expect(sharedStatesApi.get(sharedCounter)).toBe(200);
+
+        // Clear the value
+        act(() => {
+            sharedStatesApi.clear(sharedCounter);
+        });
+
+        // Get value after clear (should be initial value because createSharedState re-initializes it)
+        expect(sharedStatesApi.get(sharedCounter)).toBe(100);
+    });
 });
 
 describe('useSharedFunction', () => {
@@ -255,6 +282,108 @@ describe('useSharedFunction', () => {
         expect(mockApiCall).toHaveBeenCalledTimes(1);
         expect(screen.getByTestId('result').textContent).toBe('result: arg1');
     });
+
+    it('should allow direct api manipulation with createSharedFunction objects', () => {
+        const sharedFunction = createSharedFunction(async (arg: string) => `result: ${arg}`);
+
+        // Get initial state
+        const initialState = sharedFunctionsApi.get(sharedFunction);
+        expect(initialState.results).toBeUndefined();
+        expect(initialState.isLoading).toBe(false);
+        expect(initialState.error).toBeUndefined();
+
+        // Set a new state
+        act(() => {
+            sharedFunctionsApi.set(sharedFunction, {
+                fnState: {
+                    results: 'test data',
+                    isLoading: true,
+                    error: 'test error',
+                }
+            });
+        });
+
+        // Get updated state
+        const updatedState = sharedFunctionsApi.get(sharedFunction);
+        expect(updatedState.results).toBe('test data');
+        expect(updatedState.isLoading).toBe(true);
+        expect(updatedState.error).toBe('test error');
+
+        // Clear the value
+        act(() => {
+            sharedFunctionsApi.clear(sharedFunction);
+        });
+
+        // Get value after clear (should be initial value)
+        const clearedState = sharedFunctionsApi.get(sharedFunction);
+        expect(clearedState.results).toBeUndefined();
+        expect(clearedState.isLoading).toBe(false);
+        expect(clearedState.error).toBeUndefined();
+    });
+});
+
+describe('useSharedSubscription', () => {
+    it('should handle subscription lifecycle', () => {
+        const mockSubscriber = vi.fn<Subscriber<string>>((set) => {
+            set('initial data');
+            return () => {
+            };
+        });
+
+        const TestComponent = () => {
+            const {state: {data}, trigger} = useSharedSubscription('test-sub', mockSubscriber);
+
+            useEffect(() => {
+                trigger();
+            }, []);
+
+            return <span data-testid="data">{data}</span>;
+        };
+
+        render(<TestComponent/>);
+
+        expect(mockSubscriber).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId('data').textContent).toBe('initial data');
+    });
+
+    it('should allow direct api manipulation with createSharedSubscription objects', () => {
+        const mockSubscriber = vi.fn();
+        const sharedSubscription = createSharedSubscription(mockSubscriber);
+
+        // Get initial state
+        const initialState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(initialState.data).toBeUndefined();
+        expect(initialState.isLoading).toBe(false);
+        expect(initialState.error).toBeUndefined();
+
+        // Set a new state
+        act(() => {
+            sharedSubscriptionsApi.set(sharedSubscription, {
+                fnState: {
+                    data: 'test data',
+                    isLoading: true,
+                    error: 'test error',
+                }
+            });
+        });
+
+        // Get updated state
+        const updatedState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(updatedState.data).toBe('test data');
+        expect(updatedState.isLoading).toBe(true);
+        expect(updatedState.error).toBe('test error');
+
+        // Clear the value
+        act(() => {
+            sharedSubscriptionsApi.clear(sharedSubscription);
+        });
+
+        // Get value after clear (should be initial value)
+        const clearedState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(clearedState.data).toBeUndefined();
+        expect(clearedState.isLoading).toBe(false);
+        expect(clearedState.error).toBeUndefined();
+    });
 });
 
 describe('useSharedSubscription', () => {
@@ -354,5 +483,44 @@ describe('useSharedSubscription', () => {
         });
         expect(mockSubscriber).toHaveBeenCalledTimes(1);
         expect(screen.getByTestId('data').textContent).toBe('initial data');
+    });
+
+    it('should allow direct api manipulation with createSharedSubscription objects', () => {
+        const mockSubscriber = vi.fn();
+        const sharedSubscription = createSharedSubscription(mockSubscriber);
+
+        // Get initial state
+        const initialState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(initialState.data).toBeUndefined();
+        expect(initialState.isLoading).toBe(false);
+        expect(initialState.error).toBeUndefined();
+
+        // Set a new state
+        act(() => {
+            sharedSubscriptionsApi.set(sharedSubscription, {
+                fnState: {
+                    data: 'test data',
+                    isLoading: true,
+                    error: 'test error',
+                }
+            });
+        });
+
+        // Get updated state
+        const updatedState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(updatedState.data).toBe('test data');
+        expect(updatedState.isLoading).toBe(true);
+        expect(updatedState.error).toBe('test error');
+
+        // Clear the value
+        act(() => {
+            sharedSubscriptionsApi.clear(sharedSubscription);
+        });
+
+        // Get value after clear (should be initial value)
+        const clearedState = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(clearedState.data).toBeUndefined();
+        expect(clearedState.isLoading).toBe(false);
+        expect(clearedState.error).toBeUndefined();
     });
 });

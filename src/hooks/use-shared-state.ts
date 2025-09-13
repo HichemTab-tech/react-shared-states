@@ -1,60 +1,62 @@
 import {useMemo, useSyncExternalStore} from "react";
-import type {AFunction, Prefix, SharedCreated} from "../types";
-import {SharedApi, SharedData} from "../SharedData";
+import type {Prefix, SharedCreated} from "../types";
+import {SharedValuesApi, SharedValuesManager} from "../SharedValuesManager";
 import useShared from "./use-shared";
-import {ensureNonEmptyString, random} from "../lib/utils";
+import {ensureNonEmptyString} from "../lib/utils";
+import type {SharedValue} from "../types";
 
-class SharedStatesData extends SharedData<{
-    value: unknown
-}> {
+interface SharedState<T> extends SharedValue {
+    value: T
+}
+
+class SharedStatesManager extends SharedValuesManager<SharedState<unknown>, { value: unknown }> {
     defaultValue() {
         return {value: undefined};
     }
 
-    init(key: string, prefix: Prefix, value: unknown) {
-        super.init(key, prefix, {value});
+    initValue(key: string, prefix: Prefix, value: unknown, isStatic: boolean = false) {
+        super.init(key, prefix, {value}, isStatic);
     }
 
-    setValue(key: string, prefix: Prefix, value: unknown) {
-        super.setValue(key, prefix, {value});
-    }
-
-    removeListener(key: string, prefix: Prefix, listener: AFunction) {
-        super.removeListener(key, prefix, listener);
+    initStatic(sharedStateCreated: SharedStateCreated<any>) {
+        const {key, prefix, initialValue} = sharedStateCreated;
+        this.initValue(key, prefix, initialValue, true);
     }
 }
 
-export class SharedStatesApi extends SharedApi<{
-    value: unknown
-}>{
-    get<T, S extends string = string>(key: S, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        return sharedStatesData.get(key, prefix)?.value as T;
+export class SharedStatesApi extends SharedValuesApi<SharedState<unknown>, { value: unknown }, unknown>{
+    constructor(sharedStateManager: SharedStatesManager) {
+        super(sharedStateManager);
     }
-    set<T, S extends string = string>(key: S, value: T, scopeName: Prefix = "_global") {
-        key = ensureNonEmptyString(key);
-        const prefix: Prefix = scopeName || "_global";
-        sharedStatesData.setValue(key, prefix, {value});
+    get<T, S extends string = string>(key: S, scopeName?: Prefix): T;
+    get<T>(sharedStateCreated: SharedStateCreated<T>): T;
+    get<T, S extends string = string>(key: S | SharedStateCreated<T>, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            return (super.get(key) as SharedState<T>)?.value;
+        }
+        return (super.get(key, scopeName) as SharedState<T>)?.value;
+    }
+    set<T, S extends string = string>(key: S, value: T, scopeName?: Prefix): void;
+    set<T>(sharedStateCreated: SharedStateCreated<T>, value: T): void;
+    set<T, S extends string = string>(key: S | SharedStateCreated<T>, value: T, scopeName: Prefix = "_global") {
+        if (typeof key !== "string") {
+            super.set(key, {value});
+            return;
+        }
+        super.set(key, {value}, scopeName);
     }
 }
 
-const sharedStatesData = new SharedStatesData();
+const sharedStatesManager = new SharedStatesManager();
 
-export const sharedStatesApi = new SharedStatesApi(sharedStatesData);
+export const sharedStatesApi = new SharedStatesApi(sharedStatesManager);
 
 export interface SharedStateCreated<T> extends SharedCreated{
     initialValue: T
 }
 
 export const createSharedState = <T>(initialValue: T, scopeName?: Prefix): SharedStateCreated<T> => {
-    const prefix: Prefix = scopeName ?? scopeName ?? "_global";
-
-    return {
-        key: random(),
-        prefix,
-        initialValue,
-    }
+    return sharedStatesManager.createStatic<SharedStateCreated<T>>({initialValue}, scopeName);
 }
 
 export function useSharedState<T, S extends string>(key: S, initialValue: T, scopeName?: Prefix): readonly [T, (v: T | ((prev: T) => T)) => void];
@@ -80,30 +82,30 @@ export function useSharedState<T, S extends string>(
 
     const {prefix} = useShared(scope);
 
-    sharedStatesData.init(keyStr, prefix, initVal);
+    sharedStatesManager.initValue(keyStr, prefix, initVal);
 
     const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore>[0]>(() => (listener) => {
-        sharedStatesData.init(keyStr, prefix, initialValue);
-        sharedStatesData.addListener(keyStr, prefix, listener);
+        sharedStatesManager.initValue(keyStr, prefix, initialValue);
+        sharedStatesManager.addListener(keyStr, prefix, listener);
 
         return () => {
-            sharedStatesData.removeListener(keyStr, prefix, listener);
+            sharedStatesManager.removeListener(keyStr, prefix, listener);
         }
     }, []);
 
-    const externalStoreSnapshotGetter = useMemo(() => () => sharedStatesData.get(keyStr, prefix)?.value as T, []);
+    const externalStoreSnapshotGetter = useMemo(() => () => sharedStatesManager.get(keyStr, prefix)?.value as T, []);
 
     const dataValue = useSyncExternalStore(externalStoreSubscriber, externalStoreSnapshotGetter);
 
     const setData = (newValueOrCallbackToNewValue: T|((prev: T) => T)) => {
-        const newValue = (typeof newValueOrCallbackToNewValue === "function") ? (newValueOrCallbackToNewValue as (prev: T) => T)(sharedStatesData.get(keyStr, prefix)?.value as T) : newValueOrCallbackToNewValue
+        const newValue = (typeof newValueOrCallbackToNewValue === "function") ? (newValueOrCallbackToNewValue as (prev: T) => T)(sharedStatesManager.get(keyStr, prefix)?.value as T) : newValueOrCallbackToNewValue
         if (newValue !== dataValue) {
-            sharedStatesData.setValue(keyStr, prefix, newValue);
-            sharedStatesData.callListeners(keyStr, prefix);
+            sharedStatesManager.setValue(keyStr, prefix, {value:newValue});
+            sharedStatesManager.callListeners(keyStr, prefix);
         }
     }
 
-    sharedStatesData.useEffect(keyStr, prefix);
+    sharedStatesManager.useEffect(keyStr, prefix);
 
     return [
         dataValue,
