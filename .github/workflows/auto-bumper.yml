@@ -15,8 +15,43 @@ jobs:
     runs-on: ubuntu-latest
     if: (contains( github.event.pull_request.labels.*.name, 'auto-bump') || (contains(github.event.comment.body, '@github-bot') && contains(github.event.comment.body, 'bump')))
     steps:
+      - name: Check permissions (maintainer-only)
+        id: perm
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const username = context.payload.comment?.user?.login;
+            if (!username) {
+              core.setFailed('No commenter found in payload.');
+              return;
+            }
+            // Determine the commenter's permission level on this repo
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner,
+              repo,
+              username,
+            });
+            const allowed = ['admin', 'maintain'].includes(data.permission);
+            core.setOutput('allowed', String(allowed));
+
+      - name: Deny if not maintainer
+        if: steps.perm.outputs.allowed != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const login = context.payload.comment?.user?.login || 'user';
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: `❌ @${login}, only maintainers can bump versions. Please ask a maintainer to run "@github-bot bump".`
+            });
 
       - name: React 👍 to triggering comment
+        if: steps.perm.outputs.allowed == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -48,6 +83,7 @@ jobs:
             }
 
       - name: Checkout
+        if: steps.perm.outputs.allowed == 'true'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
@@ -55,6 +91,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Add comment to PR
+        if: steps.perm.outputs.allowed == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -67,24 +104,28 @@ jobs:
               body: `Okay BOSS, ⏳ Bumping version from ${pkg.version}...`
             })
 
-
       - name: Setup Node & pnpm
+        if: steps.perm.outputs.allowed == 'true'
         uses: actions/setup-node@v3
         with:
           node-version: '23'
 
       - name: Install pnpm
+        if: steps.perm.outputs.allowed == 'true'
         run: npm install -g pnpm
 
       - name: Install dependencies
+        if: steps.perm.outputs.allowed == 'true'
         run: pnpm install
 
       - name: Configure Git
+        if: steps.perm.outputs.allowed == 'true'
         run: |
           git config --global user.name 'GitHub Action'
           git config --global user.email 'action@github.com'
 
       - name: Bump version
+        if: steps.perm.outputs.allowed == 'true'
         run: |
           pnpm run bump
           git add package.json
@@ -92,6 +133,7 @@ jobs:
           git push
 
       - name: Add comment to PR
+        if: steps.perm.outputs.allowed == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -103,4 +145,3 @@ jobs:
               repo: context.repo.repo,
               body: `✅ Version bumped to ${pkg.version}`
             })
-    
