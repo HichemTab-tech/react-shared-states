@@ -130,6 +130,7 @@ jobs:
           pnpm run bump
 
       - name: Retrieve new version
+        if: steps.perm.outputs.allowed == 'true'
         id: ver
         uses: actions/github-script@v7
         with:
@@ -143,7 +144,7 @@ jobs:
         run: |
           git add package.json
           git commit -m "chore: bump version to ${{ steps.ver.outputs.version }}"
-          git push
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
 
       - name: Add comment to PR
         if: steps.perm.outputs.allowed == 'true'
