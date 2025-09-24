@@ -1,9 +1,11 @@
-import {useMemo, useSyncExternalStore} from "react";
+import {useMemo, useRef, useSyncExternalStore} from "react";
 import type {Prefix, SharedCreated} from "../types";
 import {SharedValuesApi, SharedValuesManager} from "../SharedValuesManager";
 import useShared from "./use-shared";
 import {ensureNonEmptyString} from "../lib/utils";
 import type {SharedValue} from "../types";
+import isEqual from "react-fast-compare";
+//import {} from "react-fast-compare"
 
 interface SharedState<T> extends SharedValue {
     value: T
@@ -111,4 +113,52 @@ export function useSharedState<T, S extends string>(
         dataValue,
         setData
     ] as const;
+}
+
+export type SharedStateSelector<S,T = S> = (original: S) => T
+
+export function useSharedStateSelector<T, S extends string, R>(key: S, selector: SharedStateSelector<T, R>, scopeName?: Prefix): Readonly<R>;
+export function useSharedStateSelector<T, R>(sharedStateCreated: SharedStateCreated<T>, selector: SharedStateSelector<T, R>): Readonly<R>;
+export function useSharedStateSelector<T, S extends string, R>(
+    key: S | SharedStateCreated<T>,
+    selector: SharedStateSelector<T, R>,
+    scopeName?: Prefix
+): Readonly<R> {
+    let keyStr: string;
+    let scope: Prefix | undefined = scopeName;
+
+    if (typeof key !== "string") {
+        const { key: key2, prefix: prefix2 } = key;
+        keyStr = key2;
+        scope = prefix2;
+    } else {
+        keyStr = ensureNonEmptyString(key);
+    }
+
+    const {prefix} = useShared(scope);
+
+    const cache = useRef<R>(undefined);
+
+    const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore>[0]>(() => (listener) => {
+        sharedStatesManager.addListener(keyStr, prefix, listener);
+
+        return () => {
+            sharedStatesManager.removeListener(keyStr, prefix, listener);
+        }
+    }, []);
+
+    const externalStoreSnapshotGetter = useMemo(() => () => {
+        const v = sharedStatesManager.get(keyStr, prefix)?.value as T;
+        const selected = selector(v);
+        if (isEqual(cache.current, selected)) {
+            return cache.current;
+        }
+        return selected;
+    }, []);
+
+    const dataValue = useSyncExternalStore(externalStoreSubscriber, externalStoreSnapshotGetter);
+
+    sharedStatesManager.useEffect(keyStr, prefix);
+
+    return dataValue as Readonly<R>;
 }

@@ -2,9 +2,10 @@ export {
     useSharedState,
     sharedStatesApi,
     createSharedState,
-    SharedStatesApi
+    SharedStatesApi,
+    useSharedStateSelector
 } from "./use-shared-state";
-export type { SharedStateCreated } from "./use-shared-state";
+export type { SharedStateCreated, SharedStateSelector } from "./use-shared-state";
 export {
     useSharedFunction,
     sharedFunctionsApi,

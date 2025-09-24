@@ -4,7 +4,7 @@ import {
     SharedStatesProvider,
     sharedSubscriptionsApi,
     useSharedFunction,
-    useSharedState,
+    useSharedState, useSharedStateSelector,
     useSharedSubscription
 } from 'react-shared-states';
 import './FakeSharedEmitter';
@@ -79,6 +79,44 @@ const Comp2 = () => {
     )
 }
 
+const Comp3 = () => {
+    const [s, set] = useSharedState("json", {a: 0, b: 0});
+
+
+    return (
+        <div>
+            <button onClick={() => set(a => ({...a, a: a.a+1}))}>plus a</button>
+            <br/>
+            <button onClick={() => set(a => ({...a, b: a.b+1}))}>plus b</button>
+            <br/>
+            results: {JSON.stringify(s)}
+            <br/>
+        </div>
+    )
+}
+
+const Comp4 = () => {
+    const a = useSharedStateSelector<{a: number, b: number}, "json", number>("json", (j) => j.a);
+    console.log("render a");
+    return (
+        <div>
+            a: {a}
+            <br/>
+        </div>
+    )
+}
+
+const Comp5 = () => {
+    const a = useSharedStateSelector<{a: number, b: number}, "json", number>("json", (j) => j.b);
+    console.log("render b");
+    return (
+        <div>
+            b: {a}
+            <br/>
+        </div>
+    )
+}
+
 const App = () => {
 
     const [hide, setHide] = useState(false);
@@ -112,6 +150,12 @@ const App = () => {
                 <Comp1/>
                 <Comp1/>
             </SharedStatesProvider>
+            <br/>
+            <br/>
+            <br/>
+            <Comp3/>
+            <Comp4/>
+            <Comp5/>
         </div>
     );
 };
