@@ -177,6 +177,7 @@ jobs:
           fi
           git add package.json
           git commit -m "chore: bump version to ${{ steps.ver.outputs.version }}"
+          git pull --rebase origin ${{ steps.pr_branch.outputs.branch }}
           git push origin HEAD:${{ steps.pr_branch.outputs.branch }}
 
       - name: Add comment to PR
