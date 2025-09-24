@@ -142,6 +142,10 @@ jobs:
       - name: Commit changes
         if: steps.perm.outputs.allowed == 'true'
         run: |
+          if [ -z "${{ github.event.pull_request.head.ref }}" ]; then
+            echo "No PR branch found. Aborting push."
+            exit 1
+          fi
           git add package.json
           git commit -m "chore: bump version to ${{ steps.ver.outputs.version }}"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
