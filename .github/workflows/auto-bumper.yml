@@ -13,7 +13,10 @@ permissions:
 jobs:
   respond:
     runs-on: ubuntu-latest
-    if: (contains( github.event.pull_request.labels.*.name, 'auto-bump') || (contains(github.event.comment.body, '@github-bot') && contains(github.event.comment.body, 'bump')))
+    if: >
+      github.event.issue.pull_request &&
+      github.event.action == 'created' &&
+      (contains(github.event.comment.body, '@github-bot') && contains(github.event.comment.body, 'bump'))
     steps:
       - name: Check permissions (maintainer-only)
         id: perm
@@ -159,6 +162,10 @@ jobs:
               repo: context.repo.repo,
               pull_number: prNumber,
             });
+            if (pr.state !== 'open') {
+              core.setFailed('PR is not open. Aborting.');
+              return;
+            }
             core.setOutput('branch', pr.head.ref);
 
       - name: Commit changes
