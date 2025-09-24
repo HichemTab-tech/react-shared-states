@@ -209,52 +209,90 @@ export default function App(){
 | Static/shared creation | Use `createSharedState`, `createSharedFunction`, `createSharedSubscription` to export reusable, type-safe shared resources that persist across `clearAll()` calls. |
 
 
-## 🏗️ Sharing State (`useSharedState`)
-Signature: 
-- `const [value, setValue] = useSharedState(key, initialValue, scopeName?)`
-- `const [value, setValue] = useSharedState(sharedStateCreated)`
+## Selecting State Slices (`useSharedStateSelector`)
 
-Behavior:
-* First hook call (per key + scope) seeds with `initialValue`.
-* Subsequent mounts with same key+scope ignore their `initialValue` (consistent source of truth).
-* Setter accepts either value or updater `(prev)=>next`.
-* React batching + equality check: listeners fire only when the value reference actually changes.
-* States created with `createSharedState` are **static** by default and are not removed by `clear()` or `clearAll()`, ensuring they persist.
+When a shared state holds an object, you might only need a small piece of it.
+Using `useSharedState` will cause your component to re-render whenever *any* part of the object changes.
+To optimize performance and avoid unnecessary re-renders, you can use the `useSharedStateSelector` hook.
 
-### Examples
-1. Global theme (recommended for large apps)
-    ```tsx
-    // themeState.ts
-    export const themeState = createSharedState('light');
-    // In components
-    const [theme, setTheme] = useSharedState(themeState);
-    ```
-2. Isolated wizard progress
-    ```tsx
-    const wizardProgress = createSharedState(0);
-    <SharedStatesProvider>
-      <Wizard/>
-    </SharedStatesProvider>
-    // In Wizard
-    const [step, setStep] = useSharedState(wizardProgress);
-    ```
-3. Forcing cross‑portal sync
-    ```tsx
-    const navState = createSharedState('closed', 'nav');
-    <SharedStatesProvider scopeName="nav" children={<PrimaryNav/>} />
-    <Portal>
-      <SharedStatesProvider scopeName="nav" children={<MobileNav/>} />
-    </Portal>
-    // In both navs
-    const [navOpen, setNavOpen] = useSharedState(navState);
-    ```
-4. Overriding nearest provider
-    ```tsx
-    // Even if inside a provider, this explicitly binds to global
-    const globalFlag = createSharedState(false, '_global');
-    const [flag, setFlag] = useSharedState(globalFlag);
-    ```
+This hook allows you to subscribe to a specific, memoized slice of a shared state.
+Your component will only re-render if the selected value changes.
+It uses `react-fast-compare` for efficient deep equality checks.
 
+Signature:
+- `const selectedValue = useSharedStateSelector(key, selector, scopeName?)`
+- `const selectedValue = useSharedStateSelector(sharedStateCreated, selector)`
+
+The `selector` is a function that receives the full state and returns the desired slice.
+
+### Example: Subscribing to a slice of a user object
+
+Imagine a shared state for user settings:
+
+```tsx
+// settingsState.ts
+import { createSharedState } from 'react-shared-states';
+
+export const settingsState = createSharedState({
+  theme: 'dark',
+  notifications: {
+    email: true,
+    push: false,
+  },
+  language: 'en',
+});
+```
+
+A component that only cares about the theme can use `useSharedStateSelector` to avoid re-rendering when, for example, the notification settings change.
+
+```tsx
+import { useSharedState, useSharedStateSelector } from 'react-shared-states';
+import { settingsState } from './settingsState';
+
+function ThemeDisplay() {
+  const theme = useSharedStateSelector(settingsState, (settings) => settings.theme);
+  
+  console.log('ThemeDisplay renders'); // This will only log when the theme changes
+
+  return <div>Current theme: {theme}</div>;
+}
+
+function NotificationToggle() {
+  const [settings, setSettings] = useSharedState(settingsState);
+
+  const togglePush = () => {
+    setSettings(s => ({
+      ...s,
+      notifications: { ...s.notifications, push: !s.notifications.push }
+    }));
+  };
+
+  return <button onClick={togglePush}>Toggle Push Notifications</button>;
+}
+```
+
+In this example, clicking the `NotificationToggle` button will **not** cause `ThemeDisplay` to re-render.
+
+### A Note on Type Safety
+
+For the best developer experience and full type safety,
+it is **highly recommended** to use `useSharedStateSelector` with a statically created shared state object from `createSharedState`.
+
+When you use a string key directly, the hook cannot infer the type of the state object.
+You would have to provide the types explicitly as generic arguments, or they will default to `any`.
+
+```tsx
+// Less safe: using a string key
+// You have to specify the types manually.
+const theme = useSharedStateSelector<{ theme: string; /*...other props*/ }, 'settings', string>(
+  'settings', 
+  (settings) => settings.theme
+);
+
+// Recommended: using a created state object
+// Types are inferred automatically!
+const theme = useSharedStateSelector(settingsState, (settings) => settings.theme);
+```
 
 ## ⚡ Shared Async Functions (`useSharedFunction`)
 Signature:
@@ -546,6 +584,12 @@ Returns `[value, setValue]`.
 
 ### `useSharedState(sharedStateCreated)`
 Returns `[value, setValue]`.
+
+### `useSharedStateSelector(key, selector, scopeName?)`
+Returns the selected value.
+
+### `useSharedStateSelector(sharedStateCreated, selector)`
+Returns the selected value.
 
 ### `useSharedFunction(key, fn, scopeName?)`
 Returns `{ state, trigger, forceTrigger, clear }`.
@@ -923,6 +967,12 @@ Returns `[value, setValue]`.
 
 ### `useSharedState(sharedStateCreated)`
 Returns `[value, setValue]`.
+
+### `useSharedStateSelector(key, selector, scopeName?)`
+Returns the selected value.
+
+### `useSharedStateSelector(sharedStateCreated, selector)`
+Returns the selected value.
 
 ### `useSharedFunction(key, fn, scopeName?)`
 Returns `{ state, trigger, forceTrigger, clear }`.
