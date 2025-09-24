@@ -139,16 +139,38 @@ jobs:
             const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
             core.setOutput('version', String(pkg.version));
 
+      - name: Get PR branch name
+        id: pr_branch
+        if: steps.perm.outputs.allowed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get the PR number from the issue_comment event
+            const prNumber = context.payload.issue.pull_request
+              ? context.payload.issue.number
+              : null;
+            if (!prNumber) {
+              core.setFailed('No PR number found in issue payload.');
+              return;
+            }
+            // Fetch the PR data
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+            core.setOutput('branch', pr.head.ref);
+
       - name: Commit changes
         if: steps.perm.outputs.allowed == 'true'
         run: |
-          if [ -z "${{ github.event.pull_request.head.ref }}" ]; then
+          if [ -z "${{ steps.pr_branch.outputs.branch }}" ]; then
             echo "No PR branch found. Aborting push."
             exit 1
           fi
           git add package.json
           git commit -m "chore: bump version to ${{ steps.ver.outputs.version }}"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:${{ steps.pr_branch.outputs.branch }}
 
       - name: Add comment to PR
         if: steps.perm.outputs.allowed == 'true'
