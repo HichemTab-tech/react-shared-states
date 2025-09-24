@@ -1,6 +1,6 @@
 {
   "name": "react-shared-states",
-  "version": "1.0.13",
+  "version": "1.0.11",
   "type": "module",
   "description": "Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping.",
   "keywords": [
