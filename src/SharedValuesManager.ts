@@ -174,7 +174,10 @@ export class SharedValuesApi<T extends SharedValue, V, R = T> {
             keyStr = ensureNonEmptyString(key);
         }
         const prefix: Prefix = scope || "_global";
+
+        this.sharedData.init(keyStr, prefix, value);
         this.sharedData.setValue(keyStr, prefix, value);
+        this.sharedData.callListeners(keyStr, prefix);
     }
 
     /**
@@ -194,6 +197,7 @@ export class SharedValuesApi<T extends SharedValue, V, R = T> {
             const [prefix, keyWithoutPrefix] = SharedValuesManager.extractPrefix(key);
             if (prefix === prefixToSearch) {
                 this.sharedData.clear(keyWithoutPrefix, prefix);
+                this.sharedData.callListeners(keyWithoutPrefix, prefix);
                 return;
             }
         });

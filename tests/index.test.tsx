@@ -11,6 +11,7 @@ import {
     sharedSubscriptionsApi,
     useSharedFunction,
     useSharedState,
+    useSharedStateSelector,
     useSharedSubscription
 } from "../src";
 import type {Subscriber, SubscriberEvents} from "../src/hooks/use-shared-subscription";
@@ -522,5 +523,140 @@ describe('useSharedSubscription', () => {
         expect(clearedState.data).toBeUndefined();
         expect(clearedState.isLoading).toBe(false);
         expect(clearedState.error).toBeUndefined();
+    });
+});
+
+describe('useSharedStateSelector', () => {
+    const initialState = {a: 1, b: 2, nested: {c: 'hello'}};
+    const sharedObjectState = createSharedState(initialState);
+
+    it('should select a slice of state and only re-render when that slice changes', () => {
+        const renderSpyA = vi.fn();
+        const renderSpyB = vi.fn();
+
+        const ComponentA = () => {
+            const a = useSharedStateSelector(sharedObjectState, state => state.a);
+            renderSpyA();
+            return <span data-testid="a-value">{a}</span>;
+        };
+
+        const ComponentB = () => {
+            const b = useSharedStateSelector(sharedObjectState, state => state.b);
+            renderSpyB();
+            return <span data-testid="b-value">{b}</span>;
+        };
+
+        const Controller = () => {
+            const [state, setState] = useSharedState(sharedObjectState);
+            return (
+                <div>
+                    <button onClick={() => setState(s => ({...s, a: s.a + 1}))}>inc a</button>
+                    <button onClick={() => setState(s => ({...s, b: s.b + 1}))}>inc b</button>
+                    <span data-testid="full-state">{JSON.stringify(state)}</span>
+                </div>
+            );
+        };
+
+        render(
+            <>
+                <ComponentA/>
+                <ComponentB/>
+                <Controller/>
+            </>
+        );
+
+        // Initial render
+        expect(screen.getByTestId('a-value').textContent).toBe('1');
+        expect(screen.getByTestId('b-value').textContent).toBe('2');
+        expect(renderSpyA).toHaveBeenCalledTimes(1);
+        expect(renderSpyB).toHaveBeenCalledTimes(1);
+
+        // Update 'b', only ComponentB should re-render
+        act(() => {
+            fireEvent.click(screen.getByText('inc b'));
+        });
+
+        expect(screen.getByTestId('a-value').textContent).toBe('1');
+        expect(screen.getByTestId('b-value').textContent).toBe('3');
+        expect(renderSpyA).toHaveBeenCalledTimes(1); // Should not re-render
+        expect(renderSpyB).toHaveBeenCalledTimes(2); // Should re-render
+
+        // Update 'a', only ComponentA should re-render
+        act(() => {
+            fireEvent.click(screen.getByText('inc a'));
+        });
+
+        expect(screen.getByTestId('a-value').textContent).toBe('2');
+        expect(screen.getByTestId('b-value').textContent).toBe('3');
+        expect(renderSpyA).toHaveBeenCalledTimes(2); // Should re-render
+        expect(renderSpyB).toHaveBeenCalledTimes(2); // Should not re-render
+    });
+
+    it('should work with string keys', () => {
+        const renderSpy = vi.fn();
+        const key = 'string-key-state';
+        sharedStatesApi.set(key, {val: 100});
+
+        const SelectorComponent = () => {
+            const val = useSharedStateSelector<{ val: number }, typeof key, number>(key, state => state.val);
+            renderSpy();
+            return <span data-testid="val">{val}</span>;
+        };
+
+        render(<SelectorComponent/>);
+        expect(screen.getByTestId('val').textContent).toBe('100');
+        expect(renderSpy).toHaveBeenCalledTimes(1);
+
+        // Update state
+        act(() => {
+            sharedStatesApi.set(key, {val: 200});
+        });
+
+        expect(screen.getByTestId('val').textContent).toBe('200');
+        expect(renderSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should perform deep comparison correctly', () => {
+        const renderSpy = vi.fn();
+        const nestedState = createSharedState({ a: 1, nested: { c: 'initial' } });
+
+        const NestedSelector = () => {
+            const nested = useSharedStateSelector(nestedState, state => state.nested);
+            renderSpy();
+            return <span data-testid="nested-c">{nested.c}</span>;
+        };
+
+        const Controller = () => {
+            const [, setState] = useSharedState(nestedState);
+            return (
+                <div>
+                    <button onClick={() => setState(s => ({ ...s, a: s.a + 1 }))}>update outer</button>
+                    <button onClick={() => setState(s => ({ ...s, nested: { c: 'updated' } }))}>update inner</button>
+                </div>
+            );
+        };
+
+        render(
+            <>
+                <NestedSelector />
+                <Controller />
+            </>
+        );
+
+        expect(screen.getByTestId('nested-c').textContent).toBe('initial');
+        expect(renderSpy).toHaveBeenCalledTimes(1);
+
+        // Update outer property, should not re-render because the selected object is deep-equal
+        act(() => {
+            fireEvent.click(screen.getByText('update outer'));
+        });
+        expect(renderSpy).toHaveBeenCalledTimes(1);
+
+        // Update inner property, should re-render
+        act(() => {
+            fireEvent.click(screen.getByText('update inner'));
+        });
+        expect(screen.getByTestId('nested-c').textContent).toBe('updated');
+        expect(renderSpy).toHaveBeenCalledTimes(2);
     });
 });
