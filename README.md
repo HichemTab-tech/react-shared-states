@@ -23,7 +23,7 @@ Tiny, ergonomic, convention‑over‑configuration state, async function, and re
 * Predictable: key + scope ⇒ value. That’s it.
 
 
-## 🚀 Install
+## Install
 
 ```sh
 npm install react-shared-states
@@ -33,7 +33,7 @@ or
 pnpm add react-shared-states
 ```
 
-## ☕ 60‑Second TL;DR
+## 60‑Second TL;DR
 ```tsx
 import { useSharedState } from 'react-shared-states';
 
@@ -196,7 +196,7 @@ export default function App(){
 ```
 
 
-## 🧠 Core Concepts
+## Core Concepts
 | Concept                | Summary                                                                                                                                                            |
 |------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Global by default      | No provider necessary. Same key => shared state.                                                                                                                   |
@@ -294,7 +294,7 @@ const theme = useSharedStateSelector<{ theme: string; /*...other props*/ }, 'set
 const theme = useSharedStateSelector(settingsState, (settings) => settings.theme);
 ```
 
-## ⚡ Shared Async Functions (`useSharedFunction`)
+## Shared Async Functions (`useSharedFunction`)
 Signature:
 - `const { state, trigger, forceTrigger, clear } = useSharedFunction(key, asyncFn, scopeName?)`
 - `const { state, trigger, forceTrigger, clear } = useSharedFunction(sharedFunctionCreated)`
@@ -325,7 +325,7 @@ const refresh = () => forceTrigger();
 ```
 
 
-## 📡 Real-time Subscriptions (`useSharedSubscription`)
+## Real-time Subscriptions (`useSharedSubscription`)
 Perfect for Firebase listeners, WebSocket connections,
 Server-Sent Events, or any streaming data source that needs cleanup.
 
@@ -467,8 +467,8 @@ Subscription semantics:
 * Components mounting later instantly get the latest `data` without re-subscribing.
 
 
-## 🛰️ Static APIs (outside React)
-## 🏛️ Static/Global Shared Resource Creation
+## Static APIs (outside React)
+## Static/Global Shared Resource Creation
 
 For large apps, you can create and export shared state, function,
 or subscription objects for type safety and to avoid key collisions.
@@ -528,7 +528,7 @@ const subStateScoped = sharedSubscriptionsApi.get('live-chat', 'myScope');
 `scopeName` defaults to `"_global"`. Internally, keys are stored as `${scope}//${key}`. The `.getAll()` method returns a nested object: `{ [scope]: { [key]: value } }`.
 
 
-## 🧩 Scoping Rules Deep Dive
+## Scoping Rules Deep Dive
 Resolution order used inside hooks:
 1. Explicit 3rd parameter (`scopeName`)
 2. Nearest `SharedStatesProvider` above the component
@@ -539,7 +539,7 @@ Unnamed providers auto‑generate a random scope name: each mount = isolated isl
 Two providers sharing the same `scopeName` act as a single logical scope even if they are disjoint in the tree (great for portals / microfrontends).
 
 
-## 🆚 Comparison Snapshot
+## Comparison Snapshot
 | Criterion      | react-shared-states                      | Redux Toolkit        | Zustand                          |
 |----------------|------------------------------------------|----------------------|----------------------------------|
 | Setup          | Install & call hook                      | Slice + store config | Create store function            |
@@ -551,7 +551,7 @@ Two providers sharing the same `scopeName` act as a single logical scope even if
 | Learning curve | Minutes                                  | Higher               | Low                              |
 
 
-## 🧪 Testing Tips
+## Testing Tips
 * Use static APIs to assert state after component interactions.
 * `sharedStatesApi.clearAll(false, true)`, `sharedFunctionsApi.clearAll(false, true)`, `sharedSubscriptionsApi.clearAll(false, true)` in `afterEach` to isolate tests and clear static states.
 * For async functions: trigger once, await UI stabilization, assert `results` present.
@@ -578,7 +578,7 @@ Subscriptions auto-cleanup when no components are listening. You can also manual
 Currently no built-in Suspense wrappers; wrap `useSharedFunction` yourself if desired.
 
 
-## 📚 Full API Reference
+## Full API Reference
 ### `useSharedState(key, initialValue, scopeName?)`
 Returns `[value, setValue]`.
 
@@ -611,7 +611,7 @@ Wrap children; optional `scopeName` (string). If omitted a random unique one is 
 
 
 
-## 🤝 Contributions
+## Contributions
 
 We welcome contributions!
 If you'd like to improve `react-shared-states`,
@@ -632,17 +632,3 @@ Inspired by React's built-in primitives and the ergonomics of modern lightweight
 Thanks to early adopters for feedback.
 If you'd like to improve `react-shared-states`,
 feel free to [open an issue](https://github.com/HichemTab-tech/react-shared-states/issues) or [submit a pull request](https://github.com/HichemTab-tech/react-shared-states/pulls).
-
-
-## Author
-
-- [@HichemTab-tech](https://www.github.com/HichemTab-tech)
-
-## License
-
-[MIT](https://github.com/HichemTab-tech/react-shared-states/blob/master/LICENSE)
-
-## 🌟 Acknowledgements
-
-Inspired by React's built-in primitives and the ergonomics of modern lightweight state libraries.
-Thanks to early adopters for feedback.
