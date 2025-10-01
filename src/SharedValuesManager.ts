@@ -181,6 +181,33 @@ export class SharedValuesApi<T extends SharedValue, V, R = T> {
     }
 
     /**
+     * update a value in the shared data
+     * @param key
+     * @param updater
+     * @param scopeName
+     */
+    update<S extends string = string>(key: S, updater: (prev: R) => V, scopeName: Prefix): void;
+    update<S extends string = string>(sharedCreated: SharedCreated, updater: (prev: R) => V): void;
+    update<S extends string = string>(key: S | SharedCreated, updater: (prev: R) => V, scopeName?: Prefix) {
+
+        let prevData;
+        if (typeof key === "string") {
+            prevData = this.get<S>(key, scopeName as Prefix);
+        }
+        else{
+            prevData = this.get(key);
+        }
+        const newValue = updater(prevData);
+
+        if (typeof key === "string") {
+            this.set(key, newValue, scopeName as Prefix);
+        }
+        else{
+            this.set(key, newValue);
+        }
+    }
+
+    /**
      * clear all values from the shared data
      */
     clearAll() {
