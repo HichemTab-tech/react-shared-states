@@ -1,6 +1,6 @@
 {
   "name": "react-shared-states",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "type": "module",
   "description": "Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping.",
   "keywords": [
@@ -34,8 +34,8 @@
     "url": "https://github.com/HichemTab-tech/react-shared-states/issues"
   },
   "peerDependencies": {
-    "react": "^19.1.11",
-    "react-dom": "^19.1.11"
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
   },
   "homepage": "https://github.com/HichemTab-tech/react-shared-states#readme",
   "devDependencies": {
