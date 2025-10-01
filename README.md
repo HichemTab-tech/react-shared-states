@@ -519,11 +519,11 @@ const subStateScoped = sharedSubscriptionsApi.get('live-chat', 'myScope');
 
 ## API summary:
 
-| API                      | Methods                                                                                                                                                                                 |
-|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `sharedStatesApi`        | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
-| `sharedFunctionsApi`     | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
-| `sharedSubscriptionsApi` | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
+| API                      | Methods                                                                                                                                                                                                                     |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `sharedStatesApi`        | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `update(key, updater, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
+| `sharedFunctionsApi`     | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `update(key, updater, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
+| `sharedSubscriptionsApi` | `get(key, scopeName?)`, `set(key, val, scopeName?)`, `update(key, updater, scopeName?)`, `has(key, scopeName?)`, `clear(key, scopeName?)`, `clearAll(withoutListeners?, withStatic?)`, `clearScope(scopeName?)`, `getAll()` |
 
 `scopeName` defaults to `"_global"`. Internally, keys are stored as `${scope}//${key}`. The `.getAll()` method returns a nested object: `{ [scope]: { [key]: value } }`.
 
