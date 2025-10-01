@@ -159,6 +159,14 @@ describe('useSharedState', () => {
         // Get updated value
         expect(sharedStatesApi.get(sharedCounter)).toBe(200);
 
+        // Update the value
+        act(() => {
+            sharedStatesApi.update(sharedCounter, (prev) => prev + 50);
+        });
+
+        // Get updated value after update
+        expect(sharedStatesApi.get(sharedCounter)).toBe(250);
+
         // Clear the value
         act(() => {
             sharedStatesApi.clear(sharedCounter);
@@ -310,6 +318,20 @@ describe('useSharedFunction', () => {
         expect(updatedState.isLoading).toBe(true);
         expect(updatedState.error).toBe('test error');
 
+        // Update the state
+        act(() => {
+            sharedFunctionsApi.update(sharedFunction, (prev) => ({
+                fnState: {
+                    ...prev,
+                    results: 'updated data',
+                }
+            }));
+        });
+
+        // Get updated state after update
+        const updatedState2 = sharedFunctionsApi.get(sharedFunction);
+        expect(updatedState2.results).toBe('updated data');
+
         // Clear the value
         act(() => {
             sharedFunctionsApi.clear(sharedFunction);
@@ -373,6 +395,20 @@ describe('useSharedSubscription', () => {
         expect(updatedState.data).toBe('test data');
         expect(updatedState.isLoading).toBe(true);
         expect(updatedState.error).toBe('test error');
+
+        // Update the state
+        act(() => {
+            sharedSubscriptionsApi.update(sharedSubscription, (prev) => ({
+                fnState: {
+                    ...prev,
+                    data: 'updated data',
+                }
+            }));
+        });
+
+        // Get updated state after update
+        const updatedState2 = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(updatedState2.data).toBe('updated data');
 
         // Clear the value
         act(() => {
@@ -512,6 +548,20 @@ describe('useSharedSubscription', () => {
         expect(updatedState.data).toBe('test data');
         expect(updatedState.isLoading).toBe(true);
         expect(updatedState.error).toBe('test error');
+
+        // Update the state
+        act(() => {
+            sharedSubscriptionsApi.update(sharedSubscription, (prev) => ({
+                fnState: {
+                    ...prev,
+                    data: 'updated data',
+                }
+            }));
+        });
+
+        // Get updated state after update
+        const updatedState2 = sharedSubscriptionsApi.get(sharedSubscription);
+        expect(updatedState2.data).toBe('updated data');
 
         // Clear the value
         act(() => {

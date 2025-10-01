@@ -92,6 +92,22 @@ export class SharedSubscriptionsApi extends SharedValuesApi<SharedSubscription<u
         }
         super.set(key, value, scopeName);
     }
+    update<T, S extends string = string>(key: S, updater: (prev: SharedSubscriptionValue<T>) => { fnState: SharedSubscriptionValue<T> }, scopeName?: Prefix): void;
+    update<T>(sharedSubscriptionCreated: SharedSubscriptionCreated<T>, updater: (prev: SharedSubscriptionValue<T>) => { fnState: SharedSubscriptionValue<T> }): void;
+    update<T, S extends string = string>(key: S | SharedSubscriptionCreated<T>, updater: (prev: SharedSubscriptionValue<T>) => { fnState: SharedSubscriptionValue<T> }, scopeName: Prefix = "_global") {
+        let prev: SharedSubscriptionValue<T>;
+        if (typeof key === "string") {
+            prev = this.get(key, scopeName);
+        } else {
+            prev = this.get(key);
+        }
+        const newValue = updater(prev);
+        if (typeof key === "string") {
+            this.set(key, newValue, scopeName);
+        } else {
+            this.set(key, newValue);
+        }
+    }
 }
 
 const sharedSubscriptionsManager = new SharedSubscriptionsManager();
