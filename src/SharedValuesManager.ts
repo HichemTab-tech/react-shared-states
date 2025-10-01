@@ -282,4 +282,22 @@ export class SharedValuesApi<T extends SharedValue, V, R = T> {
         });
         return all;
     }
+
+    subscribe<S extends string = string>(sharedCreated: SharedCreated, listener: AFunction): void;
+    subscribe<S extends string = string>(key: S | SharedCreated, listener: AFunction, scopeName?: Prefix) {
+        let keyStr!: string;
+        let prefixStr!: string;
+        if (typeof key === "string") {
+            keyStr = key;
+            prefixStr = scopeName || "_global";
+        }
+        else{
+            keyStr = key.key;
+            prefixStr = key.prefix;
+        }
+        this.sharedData.addListener(keyStr, prefixStr, listener);
+        return () => {
+            this.sharedData.removeListener(keyStr, prefixStr, listener);
+        }
+    }
 }
