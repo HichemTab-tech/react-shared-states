@@ -55,6 +55,22 @@ export class SharedFunctionsApi extends SharedValuesApi<SharedFunction<unknown>,
         }
         super.set(key, value, scopeName);
     }
+    update<T, Args extends unknown[], S extends string = string>(key: S, updater: (prev: SharedFunctionValue<T>) => { fnState: SharedFunctionValue<T> }, scopeName?: Prefix): void;
+    update<T, Args extends unknown[]>(sharedFunctionCreated: SharedFunctionCreated<T, Args>, updater: (prev: SharedFunctionValue<T>) => { fnState: SharedFunctionValue<T> }): void;
+    update<T, Args extends unknown[], S extends string = string>(key: S | SharedFunctionCreated<T, Args>, updater: (prev: SharedFunctionValue<T>) => { fnState: SharedFunctionValue<T> }, scopeName: Prefix = "_global") {
+        let prev: SharedFunctionValue<T>;
+        if (typeof key === "string") {
+            prev = this.get(key, scopeName);
+        } else {
+            prev = this.get(key);
+        }
+        const newValue = updater(prev);
+        if (typeof key === "string") {
+            this.set(key, newValue, scopeName);
+        } else {
+            this.set(key, newValue);
+        }
+    }
 }
 
 const sharedFunctionsManager = new SharedFunctionsManager();

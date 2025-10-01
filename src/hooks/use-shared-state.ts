@@ -47,6 +47,22 @@ export class SharedStatesApi extends SharedValuesApi<SharedState<unknown>, { val
         }
         super.set(key, {value}, scopeName);
     }
+    update<T, S extends string = string>(key: S, updater: (prev: T) => T, scopeName?: Prefix): void;
+    update<T>(sharedStateCreated: SharedStateCreated<T>, updater: (prev: T) => T): void;
+    update<T, S extends string = string>(key: S | SharedStateCreated<T>, updater: (prev: T) => T, scopeName: Prefix = "_global") {
+        let prev: T;
+        if (typeof key === "string") {
+            prev = this.get(key, scopeName);
+        } else {
+            prev = this.get(key);
+        }
+        const newValue = updater(prev);
+        if (typeof key === "string") {
+            this.set(key, newValue, scopeName);
+        } else {
+            this.set(key, newValue);
+        }
+    }
 }
 
 const sharedStatesManager = new SharedStatesManager();
