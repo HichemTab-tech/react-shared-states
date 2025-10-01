@@ -175,6 +175,26 @@ describe('useSharedState', () => {
         // Get value after clear (should be initial value because createSharedState re-initializes it)
         expect(sharedStatesApi.get(sharedCounter)).toBe(100);
     });
+
+    it('should be able to subscribe to state changes from api', () => {
+        const sharedCounter = createSharedState(100);
+
+        const subscribeCallback = vi.fn();
+
+        act(() => {
+            sharedStatesApi.subscribe(sharedCounter, () => {
+                subscribeCallback();
+                expect(sharedStatesApi.get(sharedCounter)).toBe(200);
+            });
+        });
+
+        // Update the value
+        act(() => {
+            sharedStatesApi.set(sharedCounter,200);
+        });
+
+        expect(subscribeCallback).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('useSharedFunction', () => {
