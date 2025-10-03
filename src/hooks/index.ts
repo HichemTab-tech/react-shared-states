@@ -20,3 +20,6 @@ export {
     SharedSubscriptionsApi
 } from "./use-shared-subscription";
 export type { SharedSubscriptionStateReturn } from "./use-shared-subscription";
+
+// noinspection JSUnusedGlobalSymbols
+export {default as useSharedContext} from './use-shared';
