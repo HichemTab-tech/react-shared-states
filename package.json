@@ -1,6 +1,6 @@
 {
   "name": "react-shared-states",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "type": "module",
   "description": "Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping.",
   "keywords": [
@@ -17,9 +17,9 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/main.esm.js",
-      "require": "./dist/main.min.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/main.min.js"
     }
   },
   "scripts": {
