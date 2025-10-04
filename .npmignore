@@ -6,3 +6,9 @@ tsconfig.json
 package-lock.json
 pnpm-lock.yaml
 demo/
+tests
+.run
+.idea
+scripts
+assets
+vite.config.ts

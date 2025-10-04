@@ -14,13 +14,14 @@
   ],
   "main": "dist/main.min.js",
   "module": "dist/main.esm.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/main.esm.js",
-      "require": "./dist/main.min.js"
+      "require": "./dist/main.min.js",
+      "types": "./dist/index.d.ts"
     }
   },
-  "types": "dist/index.d.ts",
   "scripts": {
     "tsc": "tsc",
     "bump": "node scripts/bumper.js",
