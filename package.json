@@ -17,9 +17,9 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/main.esm.js",
-      "require": "./dist/main.min.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/main.min.js"
     }
   },
   "scripts": {
