@@ -14,6 +14,12 @@
   ],
   "main": "dist/main.min.js",
   "module": "dist/main.esm.js",
+  "exports": {
+    ".": {
+      "import": "./dist/main.esm.js",
+      "require": "./dist/main.min.js"
+    }
+  },
   "types": "dist/index.d.ts",
   "scripts": {
     "tsc": "tsc",
