@@ -4,47 +4,49 @@ import {ensureNonEmptyString, log, random} from "./lib/utils";
 
 export const staticStores: SharedCreated[] = [];
 
-export abstract class SharedValuesManager<T extends SharedValue, V> {
-    data = new Map<string, T>();
+export class SharedValuesManager<T> {
+    data = new Map<string, SharedValue<T>>();
 
-    defaultValue() : V {
-        return {} as V;
+    constructor(protected defaultValue: () => T = () => null as T) {
     }
 
     addListener(key: string, prefix: Prefix, listener: AFunction) {
-        if (!this.data.has(SharedValuesManager.prefix(key, prefix))) {
-            this.data.set(SharedValuesManager.prefix(key, prefix), {
-                ...this.defaultValue(),
-                listeners: [],
-            } as unknown as T);
+        const fullKey = SharedValuesManager.prefix(key, prefix);
+        const entry = this.data.get(fullKey);
+        if (entry) {
+            entry.listeners.push(listener);
         }
-        this.data.get(SharedValuesManager.prefix(key, prefix))!.listeners.push(listener);
     }
 
     removeListener(key: string, prefix: Prefix, listener: AFunction) {
-        if (this.data.has(SharedValuesManager.prefix(key, prefix))) {
-            this.data.get(SharedValuesManager.prefix(key, prefix))!.listeners = this.data.get(SharedValuesManager.prefix(key, prefix))!.listeners.filter((l) => l !== listener);
+        const fullKey = SharedValuesManager.prefix(key, prefix);
+        const entry = this.data.get(fullKey);
+        if (entry) {
+            entry.listeners = entry.listeners.filter((l) => l !== listener);
         }
     }
 
     callListeners(key: string, prefix: Prefix) {
-        if (this.data.has(SharedValuesManager.prefix(key, prefix))) {
-            this.data.get(SharedValuesManager.prefix(key, prefix))!.listeners.forEach((listener) => listener());
+        const fullKey = SharedValuesManager.prefix(key, prefix);
+        const entry = this.data.get(fullKey);
+        if (entry) {
+            entry.listeners.forEach((listener) => listener());
         }
     }
 
-    init(key: string, prefix: Prefix, data: V, isStatic = false) {
-        if (!this.data.has(SharedValuesManager.prefix(key, prefix))) {
-            this.data.set(SharedValuesManager.prefix(key, prefix), {
-                ...data,
-                isStatic,
+    init(key: string, prefix: Prefix, initialValue: T, isStatic = false) {
+        const fullKey = SharedValuesManager.prefix(key, prefix);
+        if (!this.data.has(fullKey)) {
+            this.data.set(fullKey, {
+                value: initialValue,
+                isStatic: isStatic ? isStatic : undefined,
                 listeners: [],
-            } as unknown as T);
+            });
         }
     }
 
-    createStatic<X extends SharedCreated>(rest: Omit<X, 'key' | 'prefix'>, scopeName?: Prefix) {
-        const prefix: Prefix = scopeName ?? scopeName ?? "_global";
+    createStatic<X extends SharedCreated>(rest: Omit<X, 'key' | 'prefix'>, initialValue: T, scopeName?: Prefix): X {
+        const prefix: Prefix = scopeName ?? "_global";
 
         const staticStoreId = {
             key: random(),
@@ -54,9 +56,11 @@ export abstract class SharedValuesManager<T extends SharedValue, V> {
 
         staticStores.push(staticStoreId);
 
-        this.initStatic(staticStoreId);
+        this.init(staticStoreId.key, staticStoreId.prefix, initialValue, true);
 
-        return staticStoreId;
+        this.defaultValue = () => initialValue;
+
+        return staticStoreId as X;
     }
 
     initStatic(sharedCreated: SharedCreated) {
@@ -72,14 +76,16 @@ export abstract class SharedValuesManager<T extends SharedValue, V> {
     }
 
     clear(key: string, prefix: Prefix, withoutListeners = false, withStatic = false) {
+        const fullKey = SharedValuesManager.prefix(key, prefix);
         if (!withoutListeners) {
             this.callListeners(key, prefix);
         }
-        const data = this.data.get(SharedValuesManager.prefix(key, prefix));
+        const data = this.data.get(fullKey);
         if (!data) return;
-        const backedData = {...data};
-        this.data.delete(SharedValuesManager.prefix(key, prefix));
-        if (backedData.isStatic && !withStatic) {
+
+        this.data.delete(fullKey);
+
+        if (data.isStatic && !withStatic) {
             const store = staticStores.find((s) => s.key === key && s.prefix === prefix);
             if (store) {
                 this.initStatic(store);
@@ -87,18 +93,18 @@ export abstract class SharedValuesManager<T extends SharedValue, V> {
         }
     }
 
-    get(key: string, prefix: Prefix) {
+    get(key: string, prefix: Prefix): SharedValue<T> | undefined {
         let prefixedKey = this.has(key, prefix);
         if (!prefixedKey) return undefined;
         return this.data.get(prefixedKey);
     }
 
-    setValue(key: string, prefix: Prefix, data: V) {
-        if (this.data.has(SharedValuesManager.prefix(key, prefix))) {
-            this.data.set(SharedValuesManager.prefix(key, prefix), {
-                ...this.data.get(SharedValuesManager.prefix(key, prefix))!,
-                ...data,
-            } as unknown as T)
+    setValue(key: string, prefix: Prefix, value: T) {
+        const fullKey = SharedValuesManager.prefix(key, prefix);
+        const entry = this.data.get(fullKey);
+        if (entry) {
+            entry.value = value;
+            this.data.set(fullKey, entry);
         }
     }
 
@@ -111,34 +117,29 @@ export abstract class SharedValuesManager<T extends SharedValue, V> {
         return `${prefix}//${key}`;
     }
 
-    static extractPrefix(mapKey: string) {
-        return mapKey.split("//");
+    static extractPrefix(mapKey: string): [Prefix, string] {
+        const parts = mapKey.split("//");
+        return [parts[0], parts.slice(1).join("//")];
     }
 
-    useEffect(key: string, prefix: Prefix, unsub: (() => void)|null = null) {
+    useEffect(key: string, prefix: Prefix, unsub: (() => void) | null = null) {
         useEffect(() => {
             return () => {
                 unsub?.();
                 log(`[${SharedValuesManager.prefix(key, prefix)}]`, "unmount effect");
-                if (this.data.get(SharedValuesManager.prefix(key, prefix))!.listeners?.length === 0) {
+                const entry = this.get(key, prefix);
+                if (entry && entry.listeners?.length === 0) {
                     this.clear(key, prefix);
                 }
             }
-        }, []);
+        }, [key, prefix]);
     }
 }
 
-export class SharedValuesApi<T extends SharedValue, V, R = T> {
-    constructor(protected sharedData: SharedValuesManager<T, V>) {}
+export class SharedValuesApi<T> {
+    constructor(protected sharedData: SharedValuesManager<T>) {}
 
-    /**
-     * get a value from the shared data
-     * @param key
-     * @param scopeName
-     */
-    get<S extends string = string>(key: S, scopeName: Prefix): R;
-    get<S extends string = string>(sharedCreated: SharedCreated): R;
-    get<S extends string = string>(key: S | SharedCreated, scopeName?: Prefix) {
+    private _get(key: string | SharedCreated, scopeName?: Prefix): { value: T, key: string, prefix: Prefix } {
         let keyStr: string;
         let scope: Prefix | undefined = scopeName;
 
@@ -151,18 +152,25 @@ export class SharedValuesApi<T extends SharedValue, V, R = T> {
         }
         const prefix: Prefix = scope || "_global";
         const data = this.sharedData.get(keyStr, prefix);
-        return data as R;
+        if (data) {
+            return { value: data.value, key: keyStr, prefix };
+        }
+        return {
+            key: keyStr,
+            prefix,
+            value: undefined as T
+        };
     }
 
-    /**
-     * set a value in the shared data
-     * @param key
-     * @param value
-     * @param scopeName
-     */
-    set<S extends string = string>(key: S, value: V, scopeName: Prefix): void;
-    set<S extends string = string>(sharedCreated: SharedCreated, value: V): void;
-    set<S extends string = string>(key: S | SharedCreated, value: V, scopeName?: Prefix) {
+    get(key: string, scopeName?: Prefix): T;
+    get(sharedCreated: SharedCreated): T;
+    get(key: string | SharedCreated, scopeName?: Prefix): T {
+        return this._get(key, scopeName).value;
+    }
+
+    set(key: string, value: T, scopeName?: Prefix): void;
+    set(sharedCreated: SharedCreated, value: T): void;
+    set(key: string | SharedCreated, value: T, scopeName?: Prefix) {
         let keyStr: string;
         let scope: Prefix | undefined = scopeName;
 
@@ -180,44 +188,20 @@ export class SharedValuesApi<T extends SharedValue, V, R = T> {
         this.sharedData.callListeners(keyStr, prefix);
     }
 
-    /**
-     * update a value in the shared data
-     * @param key
-     * @param updater
-     * @param scopeName
-     */
-    update<S extends string = string>(key: S, updater: (prev: R) => V, scopeName: Prefix): void;
-    update<S extends string = string>(sharedCreated: SharedCreated, updater: (prev: R) => V): void;
-    update<S extends string = string>(key: S | SharedCreated, updater: (prev: R) => V, scopeName?: Prefix) {
-
-        let prevData;
-        if (typeof key === "string") {
-            prevData = this.get<S>(key, scopeName as Prefix);
-        }
-        else{
-            prevData = this.get(key);
-        }
-        const newValue = updater(prevData);
-
-        if (typeof key === "string") {
-            this.set(key, newValue, scopeName as Prefix);
-        }
-        else{
-            this.set(key, newValue);
+    update(key: string, updater: (prev: T) => T, scopeName?: Prefix): void;
+    update(sharedCreated: SharedCreated, updater: (prev: T) => T): void;
+    update(key: string | SharedCreated, updater: (prev: T) => T, scopeName?: Prefix) {
+        const data = this._get(key, scopeName);
+        if (data) {
+            const newValue = updater(data.value);
+            this.set(data.key, newValue, data.prefix);
         }
     }
 
-    /**
-     * clear all values from the shared data
-     */
     clearAll() {
         this.sharedData.clearAll();
     }
 
-    /**
-     * clear all values from the shared data in a scope
-     * @param scopeName
-     */
     clearScope(scopeName?: Prefix) {
         const prefixToSearch: Prefix = scopeName || "_global";
         this.sharedData.data.forEach((_, key) => {
@@ -225,73 +209,54 @@ export class SharedValuesApi<T extends SharedValue, V, R = T> {
             if (prefix === prefixToSearch) {
                 this.sharedData.clear(keyWithoutPrefix, prefix);
                 this.sharedData.callListeners(keyWithoutPrefix, prefix);
-                return;
             }
         });
     }
 
-    /**
-     * resolve a shared created object to a value
-     * @param sharedCreated
-     */
-    resolve(sharedCreated: SharedCreated) {
+    resolve(sharedCreated: SharedCreated): T | undefined {
         const {key, prefix} = sharedCreated;
         return this.get(key, prefix);
     }
 
-    /**
-     * clear a value from the shared data
-     * @param key
-     * @param scopeName
-     */
     clear(key: string, scopeName: Prefix): void;
     clear(sharedCreated: SharedCreated): void;
-    clear(key: string|SharedCreated, scopeName?: Prefix) {
-        let keyStr!: string;
-        let prefixStr!: string;
+    clear(key: string | SharedCreated, scopeName?: Prefix) {
+        let keyStr: string;
+        let prefixStr: string;
         if (typeof key === "string") {
             keyStr = key;
             prefixStr = scopeName || "_global";
-        }
-        else{
+        } else {
             keyStr = key.key;
             prefixStr = key.prefix;
         }
         this.sharedData.clear(keyStr, prefixStr);
     }
 
-    /**
-     * check if a value exists in the shared data
-     * @param key
-     * @param scopeName
-     */
-    has(key: string, scopeName: Prefix = "_global") {
+    has(key: string, scopeName: Prefix = "_global"): boolean {
         const prefix: Prefix = scopeName || "_global";
-        return Boolean(this.sharedData.has(key, prefix));
+        return !!this.sharedData.has(key, prefix);
     }
 
-    /**
-     * get all values from the shared data
-     */
-    getAll() {
+    getAll(): Record<string, Record<string, T>> {
         const all: Record<string, Record<string, any>> = {};
         this.sharedData.data.forEach((value, key) => {
             const [prefix, keyWithoutPrefix] = SharedValuesManager.extractPrefix(key);
             all[prefix] = all[prefix] || {};
-            all[prefix][keyWithoutPrefix] = value;
+            all[prefix][keyWithoutPrefix] = value.value;
         });
         return all;
     }
 
-    subscribe<S extends string = string>(sharedCreated: SharedCreated, listener: AFunction): () => void;
-    subscribe<S extends string = string>(key: S | SharedCreated, listener: AFunction, scopeName?: Prefix) {
-        let keyStr!: string;
-        let prefixStr!: string;
+    subscribe(key: string, listener: AFunction, scopeName?: Prefix): () => void;
+    subscribe(sharedCreated: SharedCreated, listener: AFunction): () => void;
+    subscribe(key: string | SharedCreated, listener: AFunction, scopeName?: Prefix): () => void {
+        let keyStr: string;
+        let prefixStr: string;
         if (typeof key === "string") {
             keyStr = key;
             prefixStr = scopeName || "_global";
-        }
-        else{
+        } else {
             keyStr = key.key;
             prefixStr = key.prefix;
         }
