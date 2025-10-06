@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    createSharedSubscription,
     sharedFunctionsApi, sharedStatesApi,
     SharedStatesProvider,
     sharedSubscriptionsApi,
@@ -24,7 +25,7 @@ const counterGlobal = createSharedState(0);
 const Comp1 = () => {
     //const [x, setX] = useSharedState('x', 0);
     //const [x, setX] = useSharedState(counterGlobal);
-    const [x, setX] = useSharedState("counterGlobal", "");
+    const [x, setX] = useSharedState("counterGlobal", 0);
     const handle = (by = 1) => {
         setX(x+by)
     }
@@ -49,19 +50,23 @@ const Comp1 = () => {
     );
 }
 
+
+
+const s = createSharedSubscription<string>((set, onError, onCompletion) => {
+
+    return FakeSharedEmitter.subscribe("x", (data: string) => {
+        if (data === "do-error") {
+            onError(new Error("Error"));
+            return;
+        }
+        set(data);
+        console.log("data loaded...", data);
+    }, onError, onCompletion)
+
+})
+
 const use = () => {
-    return useSharedSubscription<string>('test-sub', (set, onError, onCompletion) => {
-
-        return FakeSharedEmitter.subscribe("x", (data: string) => {
-            if (data === "do-error") {
-                onError(new Error("Error"));
-                return;
-            }
-            set(data);
-            console.log("data loaded...", data);
-        }, onError, onCompletion)
-
-    });
+    return useSharedSubscription(s);
 }
 
 const Comp2 = () => {

@@ -324,11 +324,9 @@ describe('useSharedFunction', () => {
         // Set a new state
         act(() => {
             sharedFunctionsApi.set(sharedFunction, {
-                fnState: {
-                    results: 'test data',
-                    isLoading: true,
-                    error: 'test error',
-                }
+                results: 'test data',
+                isLoading: true,
+                error: 'test error',
             });
         });
 
@@ -341,10 +339,8 @@ describe('useSharedFunction', () => {
         // Update the state
         act(() => {
             sharedFunctionsApi.update(sharedFunction, (prev) => ({
-                fnState: {
-                    ...prev,
-                    results: 'updated data',
-                }
+                ...prev,
+                results: 'updated data',
             }));
         });
 
@@ -402,11 +398,9 @@ describe('useSharedSubscription', () => {
         // Set a new state
         act(() => {
             sharedSubscriptionsApi.set(sharedSubscription, {
-                fnState: {
-                    data: 'test data',
-                    isLoading: true,
-                    error: 'test error',
-                }
+                data: 'test data',
+                isLoading: true,
+                error: 'test error',
             });
         });
 
@@ -419,10 +413,8 @@ describe('useSharedSubscription', () => {
         // Update the state
         act(() => {
             sharedSubscriptionsApi.update(sharedSubscription, (prev) => ({
-                fnState: {
-                    ...prev,
-                    data: 'updated data',
-                }
+                ...prev,
+                data: 'updated data',
             }));
         });
 
@@ -555,11 +547,9 @@ describe('useSharedSubscription', () => {
         // Set a new state
         act(() => {
             sharedSubscriptionsApi.set(sharedSubscription, {
-                fnState: {
-                    data: 'test data',
-                    isLoading: true,
-                    error: 'test error',
-                }
+                data: 'test data',
+                isLoading: true,
+                error: 'test error',
             });
         });
 
@@ -572,10 +562,8 @@ describe('useSharedSubscription', () => {
         // Update the state
         act(() => {
             sharedSubscriptionsApi.update(sharedSubscription, (prev) => ({
-                fnState: {
-                    ...prev,
-                    data: 'updated data',
-                }
+                ...prev,
+                data: 'updated data',
             }));
         });
 

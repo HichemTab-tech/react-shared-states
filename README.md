@@ -598,10 +598,10 @@ Returns `{ state, trigger, forceTrigger, clear }`.
 Returns `{ state, trigger, forceTrigger, clear }`.
 
 ### `useSharedSubscription(key, subscriber, scopeName?)`
-Returns `{ state, trigger, unsubscribe }`.
+Returns `{ state, trigger, forceTrigger, unsubscribe }`.
 
 ### `useSharedSubscription(sharedSubscriptionCreated)`
-Returns `{ state, trigger, unsubscribe }`.
+Returns `{ state, trigger, forceTrigger, unsubscribe }`.
 
 ### `<SharedStatesProvider scopeName?>`
 Wrap children; optional `scopeName` (string). If omitted a random unique one is generated.
