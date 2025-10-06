@@ -118,7 +118,7 @@ interface SharedSubscriptionCreated<T> extends SharedCreated{
     subscriber: Subscriber<T>
 }
 
-export const createSharedSubscription = <T, Args extends unknown[]>(subscriber: Subscriber<T>, scopeName?: Prefix): SharedSubscriptionCreated<T> => {
+export const createSharedSubscription = <T>(subscriber: Subscriber<T>, scopeName?: Prefix): SharedSubscriptionCreated<T> => {
     return sharedSubscriptionsManager.createStatic<SharedSubscriptionCreated<T>>({subscriber}, scopeName);
 }
 
