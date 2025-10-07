@@ -52,7 +52,7 @@ const Comp1 = () => {
 
 
 
-const s = createSharedSubscription<string>((set, onError, onCompletion) => {
+const s = createSharedSubscription((set, onError, onCompletion) => {
 
     return FakeSharedEmitter.subscribe("x", (data: string) => {
         if (data === "do-error") {
@@ -63,6 +63,8 @@ const s = createSharedSubscription<string>((set, onError, onCompletion) => {
         console.log("data loaded...", data);
     }, onError, onCompletion)
 
+}, {
+    initialValue: ""
 })
 
 const use = () => {
@@ -70,7 +72,7 @@ const use = () => {
 }
 
 const Comp2 = () => {
-    const {state, trigger, unsubscribe} = use();
+    const {state: {data, ...state}, trigger, unsubscribe} = use();
 
 
     return (
@@ -78,7 +80,7 @@ const Comp2 = () => {
             <h1 className="text-red-600">Comp2 - {state.isLoading && "loading"}</h1>
             <button onClick={() => trigger()}>subscribe</button>
             <button onClick={() => unsubscribe()}>unsubscribe</button>
-            results: {state.data}
+            results: {data}
             <br/>
         </div>
     )

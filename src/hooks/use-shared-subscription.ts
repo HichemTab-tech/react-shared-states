@@ -14,7 +14,7 @@ export namespace SubscriberEvents {
 export type Subscriber<T> = (set: SubscriberEvents.Set<T>, onError: SubscriberEvents.OnError, onCompletion: SubscriberEvents.OnCompletion) => PotentialPromise<Unsubscribe | void | undefined>;
 
 export type SharedSubscriptionValue<T> = {
-    data?: T;
+    data: T;
     isLoading: boolean;
     error?: unknown;
     subscribed?: boolean
@@ -24,11 +24,12 @@ interface SharedSubscription<T> extends SharedSubscriptionValue<T> {
     unsubscribe?: Unsubscribe | void;
 }
 
-const sharedSubscriptionsManager = new SharedValuesManager<SharedSubscription<any>>(() => defaultValue);
+const sharedSubscriptionsManager = new SharedValuesManager<SharedSubscription<any>>();
 export const sharedSubscriptionsApi = new SharedValuesApi<SharedSubscription<any>>(sharedSubscriptionsManager);
 
 interface SharedSubscriptionCreated<T> extends SharedCreated {
-    subscriber: Subscriber<T>
+    subscriber: Subscriber<T>;
+    triggerImmediately?: boolean;
 }
 
 const defaultValue: SharedSubscription<any> = {
@@ -39,8 +40,11 @@ const defaultValue: SharedSubscription<any> = {
     unsubscribe: undefined,
 };
 
-export const createSharedSubscription = <T>(subscriber: Subscriber<T>, scopeName?: Prefix): SharedSubscriptionCreated<T> => {
-    return sharedSubscriptionsManager.createStatic<SharedSubscriptionCreated<T>>({subscriber}, defaultValue, scopeName);
+export const createSharedSubscription = <T>(subscriber: Subscriber<T>, options?: {
+    initialValue?: T,
+    triggerImmediately?: boolean,
+}, scopeName?: Prefix): SharedSubscriptionCreated<T> => {
+    return sharedSubscriptionsManager.createStatic<SharedSubscriptionCreated<T>>({subscriber}, {...defaultValue, data: options?.initialValue as T}, scopeName);
 }
 
 export type SharedSubscriptionStateReturn<T> = {
@@ -69,12 +73,14 @@ export function useSharedSubscription<T, S extends string = string>(
     let keyStr: string;
     let subscriberVal!: Subscriber<T>;
     let scope: Prefix | undefined = scopeName;
+    let triggerImmediately = false;
 
     if (typeof key !== "string") {
-        const {key: key2, subscriber: sub, prefix: prefix2} = key;
+        const {key: key2, subscriber: sub, prefix: prefix2, triggerImmediately: _triggerImmediately} = key;
         keyStr = key2;
         subscriberVal = sub;
         scope = prefix2;
+        triggerImmediately = _triggerImmediately??false;
     } else {
         keyStr = ensureNonEmptyString(key);
         subscriberVal = subscriber as Subscriber<T>;
@@ -146,6 +152,12 @@ export function useSharedSubscription<T, S extends string = string>(
     }, [keyStr, prefix]);
 
     sharedSubscriptionsManager.useEffect(keyStr, prefix);
+
+    useEffect(() => {
+        if (triggerImmediately) {
+            void trigger(false);
+        }
+    }, []);
 
     return {
         state,
