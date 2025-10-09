@@ -16,10 +16,10 @@ export const createSharedState = <T>(initialValue: T, scopeName?: Prefix): Share
     return sharedStatesManager.createStatic({initialValue}, initialValue, scopeName);
 }
 
-export function useSharedState<T, S extends string>(key: S, initialValue: T, scopeName?: Prefix): readonly [T, (v: T | ((prev: T) => T)) => void];
+export function useSharedState<T>(key: string, initialValue: T, scopeName?: Prefix): readonly [T, (v: T | ((prev: T) => T)) => void];
 export function useSharedState<T>(sharedStateCreated: SharedStateCreated<T>): readonly [T, (v: T | ((prev: T) => T)) => void];
-export function useSharedState<T, S extends string>(
-    key: S | SharedStateCreated<T>,
+export function useSharedState<T>(
+    key: string | SharedStateCreated<T>,
     initialValue?: T,
     scopeName?: Prefix
 ): readonly [T, (v: T | ((prev: T) => T)) => void] {
@@ -72,10 +72,10 @@ export function useSharedState<T, S extends string>(
 
 export type SharedStateSelector<S,T = S> = (original: S) => T
 
-export function useSharedStateSelector<T, S extends string, R>(key: S, selector: SharedStateSelector<T, R>, scopeName?: Prefix): Readonly<R>;
+export function useSharedStateSelector<T, R = T>(key: string, selector: SharedStateSelector<T, R>, scopeName?: Prefix): Readonly<R>;
 export function useSharedStateSelector<T, R>(sharedStateCreated: SharedStateCreated<T>, selector: SharedStateSelector<T, R>): Readonly<R>;
-export function useSharedStateSelector<T, S extends string, R>(
-    key: S | SharedStateCreated<T>,
+export function useSharedStateSelector<T, R = T>(
+    key: string | SharedStateCreated<T>,
     selector: SharedStateSelector<T, R>,
     scopeName?: Prefix
 ): Readonly<R> {
@@ -95,6 +95,7 @@ export function useSharedStateSelector<T, S extends string, R>(
     const cache = useRef<R | undefined>(undefined);
 
     const externalStoreSubscriber = useMemo<Parameters<typeof useSyncExternalStore>[0]>(() => (listener) => {
+        sharedStatesManager.init(keyStr, prefix, undefined);
         sharedStatesManager.addListener(keyStr, prefix, listener);
 
         return () => {
