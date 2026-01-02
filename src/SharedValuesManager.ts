@@ -154,11 +154,11 @@ export class SharedValuesManager<T> {
                 unsub?.();
                 log(`[${SharedValuesManager.prefix(key, prefix)}]`, "unmount effect");
                 const entry = this.get(key, prefix);
-                if (entry && entry.listeners?.length === 0) {
+                if (entry && entry.listeners?.length === 0 && !entry.isStatic) {
                     this.clear(key, prefix);
                 }
             }
-        }, []);
+        }, [key, prefix]);
     }
 }
 
