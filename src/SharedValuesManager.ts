@@ -4,19 +4,29 @@ import {ensureNonEmptyString, log, random} from "./lib/utils";
 
 export const staticStores: SharedCreated[] = [];
 
+const MANAGER_KEY = Symbol.for("react-shared-states.manager");
+
+function getManager<T>(instanceKey: string, defaultValue: () => T = () => null as T) {
+    const g = globalThis as any;
+    if (!g[MANAGER_KEY]) {
+        g[MANAGER_KEY] = {};
+    }
+    if (!g[MANAGER_KEY][instanceKey]) {
+        g[MANAGER_KEY][instanceKey] = new SharedValuesManager<T>(defaultValue);
+    }
+    return g[MANAGER_KEY][instanceKey] as SharedValuesManager<T>;
+}
+
 export class SharedValuesManager<T> {
     data = new Map<string, SharedValue<T>>();
 
     static INSTANCES = new Map<string, SharedValuesManager<any>>();
 
-    private constructor(protected defaultValue: () => T = () => null as T) {
+    constructor(protected defaultValue: () => T = () => null as T) {
     }
 
-    static getInstance<T>(instanceKey: string): SharedValuesManager<T> {
-        if (!SharedValuesManager.INSTANCES.has(instanceKey)) {
-            SharedValuesManager.INSTANCES.set(instanceKey, new SharedValuesManager());
-        }
-        return SharedValuesManager.INSTANCES.get(instanceKey) as SharedValuesManager<T>;
+    static getInstance<T>(instanceKey: string, defaultValue: () => T = () => null as T): SharedValuesManager<T> {
+        return getManager(instanceKey, defaultValue);
     }
 
     addListener(key: string, prefix: Prefix, listener: AFunction) {
