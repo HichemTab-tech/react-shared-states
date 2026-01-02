@@ -19,10 +19,17 @@ function getManager<T>(instanceKey: string, defaultValue: () => T = () => null a
 
 export class SharedValuesManager<T> {
     data = new Map<string, SharedValue<T>>();
-
-    static INSTANCES = new Map<string, SharedValuesManager<any>>();
+    private readonly _uniqueId: string;
 
     constructor(protected defaultValue: () => T = () => null as T) {
+        this._uniqueId = random();
+    }
+
+    /**
+     * @internal
+     */
+    __get__uniqueId() {
+        return this._uniqueId;
     }
 
     static getInstance<T>(instanceKey: string, defaultValue: () => T = () => null as T): SharedValuesManager<T> {
@@ -156,7 +163,10 @@ export class SharedValuesManager<T> {
 }
 
 export class SharedValuesApi<T> {
-    constructor(protected sharedData: SharedValuesManager<T>) {}
+    private readonly _uniqueId: string;
+    constructor(protected sharedData: SharedValuesManager<T>) {
+        this._uniqueId = random();
+    }
 
     private _get(key: string | SharedCreated, scopeName?: Prefix): { value: T, key: string, prefix: Prefix } {
         let keyStr: string;
@@ -179,6 +189,13 @@ export class SharedValuesApi<T> {
             prefix,
             value: undefined as T
         };
+    }
+
+    __log_instance_id() {
+        return {
+            apiId: this._uniqueId,
+            managerId: this.sharedData.__get__uniqueId()
+        }
     }
 
     get(key: string, scopeName?: Prefix): T;
