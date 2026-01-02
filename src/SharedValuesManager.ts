@@ -191,6 +191,7 @@ export class SharedValuesApi<T> {
         };
     }
 
+    // noinspection JSUnusedGlobalSymbols
     __log_instance_id() {
         return {
             apiId: this._uniqueId,
