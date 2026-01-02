@@ -7,7 +7,16 @@ export const staticStores: SharedCreated[] = [];
 export class SharedValuesManager<T> {
     data = new Map<string, SharedValue<T>>();
 
-    constructor(protected defaultValue: () => T = () => null as T) {
+    static INSTANCES = new Map<string, SharedValuesManager<any>>();
+
+    private constructor(protected defaultValue: () => T = () => null as T) {
+    }
+
+    static getInstance<T>(instanceKey: string): SharedValuesManager<T> {
+        if (!SharedValuesManager.INSTANCES.has(instanceKey)) {
+            SharedValuesManager.INSTANCES.set(instanceKey, new SharedValuesManager());
+        }
+        return SharedValuesManager.INSTANCES.get(instanceKey) as SharedValuesManager<T>;
     }
 
     addListener(key: string, prefix: Prefix, listener: AFunction) {
@@ -198,10 +207,12 @@ export class SharedValuesApi<T> {
         }
     }
 
+    // noinspection JSUnusedGlobalSymbols
     clearAll() {
         this.sharedData.clearAll();
     }
 
+    // noinspection JSUnusedGlobalSymbols
     clearScope(scopeName?: Prefix) {
         const prefixToSearch: Prefix = scopeName || "_global";
         this.sharedData.data.forEach((_, key) => {
@@ -213,11 +224,13 @@ export class SharedValuesApi<T> {
         });
     }
 
+    // noinspection JSUnusedGlobalSymbols
     resolve(sharedCreated: SharedCreated): T | undefined {
         const {key, prefix} = sharedCreated;
         return this.get(key, prefix);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     clear(key: string, scopeName: Prefix): void;
     clear(sharedCreated: SharedCreated): void;
     clear(key: string | SharedCreated, scopeName?: Prefix) {
@@ -233,11 +246,13 @@ export class SharedValuesApi<T> {
         this.sharedData.clear(keyStr, prefixStr);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     has(key: string, scopeName: Prefix = "_global"): boolean {
         const prefix: Prefix = scopeName || "_global";
         return !!this.sharedData.has(key, prefix);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     getAll(): Record<string, Record<string, T>> {
         const all: Record<string, Record<string, any>> = {};
         this.sharedData.data.forEach((value, key) => {

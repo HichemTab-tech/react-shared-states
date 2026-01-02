@@ -5,7 +5,7 @@ import useShared from "./use-shared";
 import {ensureNonEmptyString} from "../lib/utils";
 import isEqual from "react-fast-compare";
 
-const sharedStatesManager = new SharedValuesManager<any>();
+const sharedStatesManager = SharedValuesManager.getInstance<any>("sharedStatesManager");
 export const sharedStatesApi = new SharedValuesApi<any>(sharedStatesManager);
 
 export interface SharedStateCreated<T> extends SharedCreated {

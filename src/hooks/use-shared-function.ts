@@ -10,7 +10,7 @@ export type SharedFunctionValue<T> = {
     error?: unknown;
 }
 
-const sharedFunctionsManager = new SharedValuesManager<SharedFunctionValue<any>>();
+const sharedFunctionsManager = SharedValuesManager.getInstance<SharedFunctionValue<any>>("SharedFunctionValue");
 export const sharedFunctionsApi = new SharedValuesApi<SharedFunctionValue<any>>(sharedFunctionsManager);
 
 interface SharedFunctionCreated<T, Args extends unknown[]> extends SharedCreated {

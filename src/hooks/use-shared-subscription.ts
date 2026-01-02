@@ -24,7 +24,7 @@ interface SharedSubscription<T> extends SharedSubscriptionValue<T> {
     unsubscribe?: Unsubscribe | void;
 }
 
-const sharedSubscriptionsManager = new SharedValuesManager<SharedSubscription<any>>();
+const sharedSubscriptionsManager = SharedValuesManager.getInstance<SharedSubscription<any>>("SharedSubscription");
 export const sharedSubscriptionsApi = new SharedValuesApi<SharedSubscription<any>>(sharedSubscriptionsManager);
 
 interface SharedSubscriptionCreated<T> extends SharedCreated {
