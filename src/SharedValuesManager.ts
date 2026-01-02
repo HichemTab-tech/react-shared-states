@@ -152,11 +152,11 @@ export class SharedValuesManager<T> {
         useEffect(() => {
             return () => {
                 unsub?.();
-                log(`[${SharedValuesManager.prefix(key, prefix)}]`, "unmount effect");
+                /*log(`[${SharedValuesManager.prefix(key, prefix)}]`, "unmount effect");
                 const entry = this.get(key, prefix);
                 if (entry && entry.listeners?.length === 0) {
                     this.clear(key, prefix);
-                }
+                }*/
             }
         }, [key, prefix]);
     }

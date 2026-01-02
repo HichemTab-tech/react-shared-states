@@ -1,6 +1,6 @@
 {
   "name": "react-shared-states",
-  "version": "2.1.4-beta",
+  "version": "2.1.5-beta",
   "type": "module",
   "description": "Global state made as simple as useState, with zero config, built-in async caching, and automatic scoping.",
   "keywords": [
